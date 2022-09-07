@@ -16,34 +16,37 @@
 <body>
 
 <!-- Navigation -->
-<nav class="navbar navbar-expand-md navbar-light bg-light sticky-top">
-	<div class="container-fluid">
-		<a class="navbar-brand" href="#"><img src="img/logo6.jpg"></a>
-		<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarResponsive">
-			<span class="navbar-toggler-icon"></span>
-		</button>
-		<div class="collapse navbar-collapse" id="navbarResponsive">
-			<ul class="navbar-nav ml-auto">
-				<li class="nav-item active">
-					<a class="nav-link" href="#">Home</a>
-				</li>
-				<li class="nav-item">
-					<a class="nav-link" href="#">About</a>
-				</li>
-				<li class="nav-item">
-					<a class="nav-link" href="#">Services</a>
-				</li>
-				<li class="nav-item">
-					<a class="nav-link" href="#">Team</a>
-				</li>
-				<li class="nav-item">
-					<a class="nav-link" href="#">Connect</a>
-				</li>
-			</ul>
-		</div>
-	</div>
-</nav>
+	<nav class="navbar navbar-dark navbar-expand-lg"  uk-sticky="top:100; animation: uk-animation-slide-top; bottom: #sticky-on-scroll-up">
+		<div class="container">
+			<a href="index.html" class="navbar-brand">
+				<img src="img/logo6.png" class="img-fluid p-0" style="width: 35%; filter: brightness(0) invert(1);">
+				<div class="ml-2 p-0 d-inline webT">Slothy's Website!</div>
+			</a>
+			<button class="navbar-toggler navbar-toggler-right" data-toggle="collapse" data-target="#navBar">
+				<span class="navbar-toggler-icon"></span>
+			</button>
+			<div class="collapse navbar-collapse" id="navBar">
+				<ul class="navbar-nav  ml-auto ">
 
+					<li class="nav-item active">
+						<a class="nav-link " href="index.html">Home</a>
+					</li>
+					<li class="nav-item">
+						<a class="nav-link" href="about.html">About</a>
+					</li>
+					<li class="nav-item">
+						<a class="nav-link" href="services.html">Services</a>
+					</li>
+					<li class="nav-item">
+						<a class="nav-link" href="blog.html">Blog</a>
+					</li>
+					<li class="nav-item">
+						<a class="nav-link" href="contact.html">Contact</a>
+					</li>
+				</ul>
+			</div>
+		</div>
+	</nav>
 <!--- Image Slider -->
 <div id="slides" class="carousel slide" data-ride="carousel" data-aos="fade-up"
 		data-aos-offset="200"
