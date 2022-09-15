@@ -1,6 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+	<script>
+        function testVariable() {
+            var strText = document.getElementById("textone").value;          
+            var strText1 = document.getElementById("textTWO").value;
+            var result = strText + ' ' + strText1;
+            document.getElementById('spanResult').textContent = result;
+             
+        }
+    </script>
+	
 	<link rel="shortcut icon" type="image/x-icon" href="img/logo6.png/favicon.ico" />
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
@@ -46,7 +56,12 @@
 </nav>
 
 	
-	
+    <input type="text" id="textone" />
+    <input type="text" id="textTWO" />
+    <button  onclick="testVariable()">Submit</button> <br />
+    <span id="spanResult">
+
+    </span>	
 	
 	
 	
