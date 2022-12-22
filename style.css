@@ -216,6 +216,10 @@ hr.light-100 {
   }
 }
 
+h2, p {
+  color: initial;
+  text-decoration: none;
+}
 
 
 /*---Firefox Bug Fix --*/
