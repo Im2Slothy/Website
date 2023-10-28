@@ -66,9 +66,11 @@
 <!-- Load the Twitch embed script -->
 <script src="https://player.twitch.tv/js/embed/v1.js"></script>
 
-<!-- Create a Twitch.Embed object. This will render within the placeholder div -->
+<!-- Create a Twitch.Embed object with the desired width and height -->
 <script type="text/javascript">
   new Twitch.Player("twitch-embed", {
+    width: 250, // Set the width to 250 pixels
+    height: 250, // Set the height to 250 pixels
     channel: "Im2Slothy",
     parent: ["im2slothy.github.io"]
   });
