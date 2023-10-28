@@ -9,39 +9,32 @@ body {
     justify-content: center;
     height: 100vh;
 }
-
+.container {
+    max-width: 600px; /* Set a maximum width for the content */
+    overflow: auto; /* Enable scrolling if content exceeds the container height */
+    margin: 0 auto; /* Center the container horizontally */
+}
+h1 {
+    font-size: 36px;
+    color: #fff;
+    margin-bottom: 20px;
+}
 .welcome-box {
     background-color: #292929;
     border-radius: 10px;
     padding: 20px;
     text-align: center;
-    margin: 10px;
     color: #fff;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
 }
-
-h1 {
-    font-size: 36px;
-    margin-bottom: 10px;
-}
-
 .commands {
     font-size: 18px;
 }
-
 ul {
     list-style: none;
     padding: 0;
 }
-
 li {
     font-size: 16px;
     margin: 5px;
 }
-
-#twitch-embed {
-    width: 250px; /* Set the width to 250 pixels */
-    height: 250px; /* Set the height to 250 pixels */
-    margin: 10px;
-}
-
