@@ -60,16 +60,19 @@
             </ul>
         </div>
     </div>
-    <div class="twitch-embed">
-        <iframe
-            src="https://player.twitch.tv/?channel=twitchpresents&parent=streamernews.example.com&parent=embeds.example.com"
-            height="400"
-            width="800"
-            frameborder="0"
-            scrolling="no"
-            allowfullscreen="true">
-        </iframe>
-    </div>
+<!-- Add a placeholder for the Twitch embed -->
+<div id="twitch-embed"></div>
+
+<!-- Load the Twitch embed script -->
+<script src="https://player.twitch.tv/js/embed/v1.js"></script>
+
+<!-- Create a Twitch.Embed object. This will render within the placeholder div -->
+<script type="text/javascript">
+  new Twitch.Player("twitch-embed", {
+    channel: "Im2Slothy",
+    parent: ["im2slothy.github.io"]
+  });
+</script>
 <!--Socials-->
 <div class="container-fluid padding">
     <div class="row text-center padding">
