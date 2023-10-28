@@ -39,8 +39,9 @@ li {
     margin: 5px;
 }
 
-.twitch-embed {
+#twitch-embed {
+    width: 250px; /* Set the width to 250 pixels */
+    height: 250px; /* Set the height to 250 pixels */
     margin: 10px;
 }
-
 
