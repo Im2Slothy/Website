@@ -48,13 +48,16 @@ document.getElementById('host-btn').onclick = () => {
             document.getElementById('peer-id').value = id;
             document.getElementById('peer-id').disabled = true;
             document.getElementById('status').textContent = 'Status: Hosting...';
-            if (!gameRunning) startGame();
         });
         peer.on('connection', (connection) => {
             console.log('Opponent connected to host:', connection.peer);
             conn = connection;
-            players[conn.peer] = { x: 700, y: 300, color: 'cyan', health: 100, speed: 3, shootCooldown: 0, lives: 3 };
-            document.getElementById('status').textContent = 'Status: Opponent joined! Playing...';
+            conn.on('open', () => {
+                console.log('Connection opened on host');
+                players[conn.peer] = { x: 700, y: 300, color: 'cyan', health: 100, speed: 3, shootCooldown: 0, lives: 3 };
+                document.getElementById('status').textContent = 'Status: Opponent joined! Playing...';
+                if (!gameRunning) startGame();
+            });
             conn.on('data', handleData);
             conn.on('close', () => {
                 console.log('Opponent disconnected from host');
@@ -148,7 +151,7 @@ document.getElementById('chat-input').onkeydown = (e) => {
     if (e.key === 'Enter' && e.target.value) {
         const msg = `${playerId?.slice(0, 5) || 'You'}: ${e.target.value}`;
         document.getElementById('chat-box').innerHTML += `<p>${msg}</p>`;
-        if (conn) sendData({ type: 'chat', msg });
+        if (conn && conn.open) sendData({ type: 'chat', msg });
         e.target.value = '';
     }
 };
@@ -234,7 +237,6 @@ function sendData(data) {
 }
 
 function spawnPowerUp() {
-    // Only spawn if there are two players or AI is active
     if ((Object.keys(players).length === 2 || aiActive) && Math.random() < 0.001) {
         powerUps.push({
             x: Math.random() * (canvas.width - 20),
