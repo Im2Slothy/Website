@@ -36,6 +36,7 @@
         const ctx = canvas.getContext('2d');
         let peer = null;
         let conn = null;
+        let lobbyConn = null;
         let playerId = null;
         let players = {};
         let bullets = [];
@@ -46,7 +47,7 @@
         let gameRunning = false;
         let flashTimer = 0;
         let countdown = -1;
-        let publicGames = {}; // { peerId: { players: num, public: true/false } }
+        let publicGames = {};
 
         // Audio setup
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -62,6 +63,23 @@
             setTimeout(() => osc.stop(), duration);
         }
 
+        // Connect to lobby peer
+        function connectToLobby() {
+            const lobbyPeer = new Peer();
+            lobbyPeer.on('open', (id) => {
+                lobbyConn = lobbyPeer.connect('lobby-public');
+                lobbyConn.on('open', () => {
+                    lobbyConn.send({ type: 'requestGames' });
+                });
+                lobbyConn.on('data', (data) => {
+                    if (data.type === 'gameList') {
+                        publicGames = data.games;
+                        updatePublicGames();
+                    }
+                });
+            });
+        }
+
         // Host game
         document.getElementById('host-btn').onclick = () => {
             if (!peer) {
@@ -74,13 +92,15 @@
                     document.getElementById('peer-id').disabled = true;
                     document.getElementById('status').textContent = 'Status: Hosting... Waiting for opponent';
                     publicGames[id] = { players: 1, public: isPublic };
-                    if (isPublic) updatePublicGames();
+                    if (isPublic && lobbyConn) lobbyConn.send({ type: 'addGame', id, players: 1 });
+                    updatePublicGames();
                 });
                 peer.on('connection', (connection) => {
                     conn = connection;
                     conn.on('open', () => {
                         players[conn.peer] = { x: 700, y: 300, color: 'cyan', health: 100, speed: 3, shootCooldown: 0, lives: 3 };
                         publicGames[playerId].players = 2;
+                        if (lobbyConn) lobbyConn.send({ type: 'updateGame', id: playerId, players: 2 });
                         updatePublicGames();
                         document.getElementById('status').textContent = 'Status: Opponent joined! Starting in 5...';
                         countdown = 5;
@@ -93,6 +113,7 @@
                             gameRunning = false;
                             delete players[conn.peer];
                             delete publicGames[playerId];
+                            if (lobbyConn) lobbyConn.send({ type: 'removeGame', id: playerId });
                             updatePublicGames();
                             document.getElementById('restart-btn').style.display = 'block';
                         }
@@ -155,6 +176,7 @@
                     conn = peer.connect(selectedId);
                     conn.on('open', () => {
                         publicGames[selectedId].players = 2;
+                        if (lobbyConn) lobbyConn.send({ type: 'updateGame', id: selectedId, players: 2 });
                         updatePublicGames();
                         document.getElementById('status').textContent = 'Status: Joined public game! Starting in 5...';
                         countdown = 5;
@@ -196,6 +218,7 @@
             playerId = null;
             peer = null;
             conn = null;
+            lobbyConn = null;
             publicGames = {};
             updatePublicGames();
             document.getElementById('peer-id').value = '';
@@ -203,12 +226,13 @@
             document.getElementById('status').textContent = 'Status: Waiting...';
             document.getElementById('restart-btn').style.display = 'none';
             document.getElementById('chat-box').innerHTML = '';
+            connectToLobby();
         };
 
         // Chat
         document.getElementById('chat-input').onkeydown = (e) => {
             if (e.key === 'Enter' && e.target.value) {
-                const msg = `${playerId.slice(0, 5)}: ${e.target.value}`;
+                const msg = `${playerId?.slice(0, 5) || 'You'}: ${e.target.value}`;
                 document.getElementById('chat-box').innerHTML += `<p>${msg}</p>`;
                 if (conn) sendData({ type: 'chat', msg });
                 e.target.value = '';
@@ -259,14 +283,12 @@
             ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Flash effect
             if (flashTimer > 0) {
                 ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
                 flashTimer--;
             }
 
-            // Grid background
             ctx.strokeStyle = '#333';
             for (let i = 0; i < canvas.width; i += 50) {
                 ctx.beginPath();
@@ -281,7 +303,6 @@
                 ctx.stroke();
             }
 
-            // Countdown
             if (countdown > 0) {
                 ctx.fillStyle = 'white';
                 ctx.font = '30px Arial';
@@ -290,14 +311,12 @@
                 return;
             }
 
-            // Scoreboard
             ctx.fillStyle = 'white';
             ctx.font = '16px Arial';
             ctx.fillText(`You: ${players[playerId]?.lives || 0} lives`, 10, 20);
             const opponentId = Object.keys(players).find(id => id !== playerId);
             ctx.fillText(`Opponent: ${players[opponentId]?.lives || 0} lives`, canvas.width - 150, 20);
 
-            // Move human player
             let me = players[playerId];
             if (me) {
                 if (me.health <= 0 && me.lives > 0) {
@@ -327,7 +346,6 @@
                 if (conn) sendData({ type: 'move', id: playerId, x: me.x, y: me.y });
             }
 
-            // AI logic
             if (aiActive) {
                 const ai = players['ai'];
                 const human = players[playerId];
@@ -371,7 +389,6 @@
                 ai.shootCooldown--;
             }
 
-            // Shoot (human)
             if (keys[' '] && me && me.shootCooldown <= 0) {
                 if (!keys['spacePressed']) {
                     const bullet = { x: me.x + PLAYER_SIZE, y: me.y + PLAYER_SIZE / 2, owner: playerId, dx: BULLET_SPEED };
@@ -386,7 +403,6 @@
             }
             if (me) me.shootCooldown--;
 
-            // Power-ups
             spawnPowerUp();
             powerUps = powerUps.filter(p => {
                 for (let id in players) {
@@ -401,7 +417,6 @@
                 return true;
             });
 
-            // Update bullets
             bullets = bullets.filter(b => {
                 b.x += b.dx || BULLET_SPEED;
                 if (b.x > canvas.width || b.x < 0) return false;
@@ -419,7 +434,6 @@
                 return true;
             });
 
-            // Draw power-ups
             powerUps.forEach(p => {
                 ctx.fillStyle = p.type === 'speed' ? 'yellow' : 'green';
                 ctx.beginPath();
@@ -427,7 +441,6 @@
                 ctx.fill();
             });
 
-            // Draw players
             for (let id in players) {
                 const p = players[id];
                 ctx.fillStyle = p.color;
@@ -440,7 +453,6 @@
                 ctx.strokeRect(p.x, p.y - 10, PLAYER_SIZE, 5);
             }
 
-            // Draw bullets
             ctx.fillStyle = 'white';
             bullets.forEach(b => {
                 ctx.fillRect(b.x, b.y, 5, 2);
@@ -450,6 +462,9 @@
 
             if (gameRunning) requestAnimationFrame(gameLoop);
         }
+
+        // Start lobby connection on page load
+        connectToLobby();
     </script>
 </body>
 </html>
