@@ -1,0 +1,61 @@
+body { 
+    text-align: center; 
+    font-family: Arial; 
+    background: #111; 
+    color: white; 
+    margin: 0; 
+    padding: 10px; 
+    overflow: hidden;
+}
+canvas { 
+    border: 1px solid black; 
+    background: #222; 
+    max-width: 100%; 
+    height: auto; 
+    display: block; 
+    margin: 0 auto;
+}
+#powerup-info { 
+    font-size: 14px; 
+    margin-top: 10px; 
+}
+#restart-btn { 
+    display: none; 
+    margin-top: 10px; 
+}
+#chat-box { 
+    height: 80px; 
+    overflow-y: auto; 
+    border: 1px solid #333; 
+    margin-top: 10px; 
+    padding: 5px; 
+    font-size: 12px;
+}
+#chat-input { 
+    width: 80%; 
+    margin-top: 5px; 
+    font-size: 12px; 
+}
+#controls { 
+    position: fixed; 
+    bottom: 10px; 
+    left: 10px; 
+    width: 100px; 
+    height: 100px; 
+    opacity: 0.5; 
+    display: none; /* Hidden by default */
+}
+#joystick { 
+    width: 50px; 
+    height: 50px; 
+    background: rgba(255, 255, 255, 0.7); 
+    border-radius: 50%; 
+    position: absolute; 
+    top: 25px; 
+    left: 25px; 
+    pointer-events: none;
+}
+button, input { 
+    font-size: 14px; 
+    margin: 5px; 
+}
