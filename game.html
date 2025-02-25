@@ -40,6 +40,7 @@
             width: 100px; 
             height: 100px; 
             opacity: 0.5; 
+            display: none; /* Hidden by default */
         }
         #joystick { 
             width: 50px; 
@@ -119,6 +120,7 @@
             if (!peer) {
                 peer = new Peer();
                 peer.on('open', (id) => {
+                    console.log('Host ID generated:', id);
                     playerId = id;
                     players[playerId] = { x: 100, y: 300, color: 'red', health: 100, speed: 3, shootCooldown: 0, lives: 3 };
                     document.getElementById('peer-id').value = id;
@@ -126,15 +128,21 @@
                     document.getElementById('status').textContent = 'Status: Hosting... Waiting for opponent';
                 });
                 peer.on('connection', (connection) => {
+                    console.log('Opponent connected to host:', connection.peer);
                     conn = connection;
                     conn.on('open', () => {
+                        console.log('Connection opened on host');
                         players[conn.peer] = { x: 700, y: 300, color: 'cyan', health: 100, speed: 3, shootCooldown: 0, lives: 3 };
                         document.getElementById('status').textContent = 'Status: Opponent joined! Starting in 5...';
                         countdown = 5;
-                        setTimeout(() => { if (!gameRunning) startGame(); }, 5000);
+                        setTimeout(() => { 
+                            console.log('Host starting game');
+                            if (!gameRunning) startGame(); 
+                        }, 5000);
                     });
                     conn.on('data', handleData);
                     conn.on('close', () => {
+                        console.log('Opponent disconnected from host');
                         if (gameRunning) {
                             document.getElementById('status').textContent = 'Status: Opponent disconnected. You win!';
                             gameRunning = false;
@@ -142,27 +150,39 @@
                             document.getElementById('restart-btn').style.display = 'block';
                         }
                     });
+                    conn.on('error', (err) => console.error('Host connection error:', err));
                 });
+                peer.on('error', (err) => console.error('Host peer error:', err));
             }
         };
 
         // Join game
         document.getElementById('join-btn').onclick = () => {
             if (!peer) {
+                const hostId = document.getElementById('peer-id').value.trim();
+                if (!hostId) {
+                    document.getElementById('status').textContent = 'Status: Enter a valid Host ID!';
+                    return;
+                }
                 peer = new Peer();
                 peer.on('open', (id) => {
+                    console.log('Joiner ID generated:', id);
                     playerId = id;
                     players[playerId] = { x: 700, y: 300, color: 'cyan', health: 100, speed: 3, shootCooldown: 0, lives: 3 };
-                    const hostId = document.getElementById('peer-id').value;
                     conn = peer.connect(hostId);
                     conn.on('open', () => {
+                        console.log('Connected to host:', hostId);
                         document.getElementById('status').textContent = 'Status: Connected! Starting in 5...';
                         document.getElementById('peer-id').disabled = true;
                         countdown = 5;
-                        setTimeout(() => { if (!gameRunning) startGame(); }, 5000);
+                        setTimeout(() => { 
+                            console.log('Joiner starting game');
+                            if (!gameRunning) startGame(); 
+                        }, 5000);
                     });
                     conn.on('data', handleData);
                     conn.on('close', () => {
+                        console.log('Disconnected from host');
                         if (gameRunning) {
                             document.getElementById('status').textContent = 'Status: Opponent disconnected. You win!';
                             gameRunning = false;
@@ -170,7 +190,9 @@
                             document.getElementById('restart-btn').style.display = 'block';
                         }
                     });
+                    conn.on('error', (err) => console.error('Joiner connection error:', err));
                 });
+                peer.on('error', (err) => console.error('Joiner peer error:', err));
             }
         };
 
@@ -219,55 +241,61 @@
             }
         };
 
-        // Touch controls
+        // Touch controls (only on mobile)
+        const controls = document.getElementById('controls');
         const joystick = document.getElementById('joystick');
         let touchState = { moving: false, shooting: false, moveX: 0, moveY: 0 };
-
-        canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            const touch = e.touches[0];
-            if (touch.clientX < canvas.width / 2) {
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (isMobile) {
+            controls.style.display = 'block';
+            controls.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
                 touchState.moving = true;
-            } else {
-                touchState.shooting = true;
-            }
-        });
-
-        canvas.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            const touch = e.touches[0];
-            if (touchState.moving) {
-                const rect = document.getElementById('controls').getBoundingClientRect();
-                const dx = touch.clientX - rect.left - 50;
-                const dy = touch.clientY - rect.top - 50;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                const maxDist = 25;
-                if (dist > maxDist) {
-                    const scale = maxDist / dist;
-                    touchState.moveX = dx * scale;
-                    touchState.moveY = dy * scale;
-                } else {
-                    touchState.moveX = dx;
-                    touchState.moveY = dy;
+            });
+            controls.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                if (touchState.moving) {
+                    const rect = controls.getBoundingClientRect();
+                    const dx = touch.clientX - rect.left - 50;
+                    const dy = touch.clientY - rect.top - 50;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const maxDist = 25;
+                    if (dist > maxDist) {
+                        const scale = maxDist / dist;
+                        touchState.moveX = dx * scale;
+                        touchState.moveY = dy * scale;
+                    } else {
+                        touchState.moveX = dx;
+                        touchState.moveY = dy;
+                    }
+                    joystick.style.left = (25 + touchState.moveX) + 'px';
+                    joystick.style.top = (25 + touchState.moveY) + 'px';
                 }
-                joystick.style.left = (25 + touchState.moveX) + 'px';
-                joystick.style.top = (25 + touchState.moveY) + 'px';
-            }
-        });
-
-        canvas.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            if (e.touches.length === 0 || !e.touches[0].clientX < canvas.width / 2) {
+            });
+            controls.addEventListener('touchend', (e) => {
+                e.preventDefault();
                 touchState.moving = false;
                 touchState.moveX = 0;
                 touchState.moveY = 0;
                 joystick.style.left = '25px';
                 joystick.style.top = '25px';
-            }
-            if (e.touches.length === 0 || e.touches[0].clientX >= canvas.width / 2) {
-                touchState.shooting = false;
-            }
-        });
+            });
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                if (touch.clientX > canvas.width / 2) {
+                    touchState.shooting = true;
+                }
+            });
+            canvas.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                if (e.touches.length === 0 || e.touches[0].clientX <= canvas.width / 2) {
+                    touchState.shooting = false;
+                }
+            });
+        }
 
         // Game logic
         const keys = {};
@@ -367,12 +395,10 @@
                     return;
                 }
                 const speed = me.speed;
-                // Keyboard controls
                 if (keys['ArrowLeft'] || keys['a']) me.x -= speed;
                 if (keys['ArrowRight'] || keys['d']) me.x += speed;
                 if (keys['ArrowUp'] || keys['w']) me.y -= speed;
                 if (keys['ArrowDown'] || keys['s']) me.y += speed;
-                // Touch controls
                 if (touchState.moving) {
                     me.x += touchState.moveX * speed / 25;
                     me.y += touchState.moveY * speed / 25;
