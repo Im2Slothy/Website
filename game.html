@@ -130,16 +130,15 @@
                 peer.on('connection', (connection) => {
                     console.log('Opponent connected to host:', connection.peer);
                     conn = connection;
-                    conn.on('open', () => {
-                        console.log('Connection opened on host');
-                        players[conn.peer] = { x: 700, y: 300, color: 'cyan', health: 100, speed: 3, shootCooldown: 0, lives: 3 };
-                        document.getElementById('status').textContent = 'Status: Opponent joined! Starting in 5...';
-                        countdown = 5;
-                        setTimeout(() => { 
-                            console.log('Host starting game');
-                            if (!gameRunning) startGame(); 
-                        }, 5000);
-                    });
+                    if (conn.open) {
+                        console.log('Connection already open on host');
+                        initializeGameOnHost();
+                    } else {
+                        conn.on('open', () => {
+                            console.log('Connection opened on host');
+                            initializeGameOnHost();
+                        });
+                    }
                     conn.on('data', handleData);
                     conn.on('close', () => {
                         console.log('Opponent disconnected from host');
@@ -156,6 +155,13 @@
             }
         };
 
+        function initializeGameOnHost() {
+            players[conn.peer] = { x: 700, y: 300, color: 'cyan', health: 100, speed: 3, shootCooldown: 0, lives: 3 };
+            document.getElementById('status').textContent = 'Status: Opponent joined! Starting in 5...';
+            countdown = 5;
+            if (!gameRunning) startGame();
+        }
+
         // Join game
         document.getElementById('join-btn').onclick = () => {
             if (!peer) {
@@ -170,16 +176,15 @@
                     playerId = id;
                     players[playerId] = { x: 700, y: 300, color: 'cyan', health: 100, speed: 3, shootCooldown: 0, lives: 3 };
                     conn = peer.connect(hostId);
-                    conn.on('open', () => {
-                        console.log('Connected to host:', hostId);
-                        document.getElementById('status').textContent = 'Status: Connected! Starting in 5...';
-                        document.getElementById('peer-id').disabled = true;
-                        countdown = 5;
-                        setTimeout(() => { 
-                            console.log('Joiner starting game');
-                            if (!gameRunning) startGame(); 
-                        }, 5000);
-                    });
+                    if (conn.open) {
+                        console.log('Connection already open to host:', hostId);
+                        initializeGameOnJoiner();
+                    } else {
+                        conn.on('open', () => {
+                            console.log('Connected to host:', hostId);
+                            initializeGameOnJoiner();
+                        });
+                    }
                     conn.on('data', handleData);
                     conn.on('close', () => {
                         console.log('Disconnected from host');
@@ -195,6 +200,13 @@
                 peer.on('error', (err) => console.error('Joiner peer error:', err));
             }
         };
+
+        function initializeGameOnJoiner() {
+            document.getElementById('status').textContent = 'Status: Connected! Starting in 5...';
+            document.getElementById('peer-id').disabled = true;
+            countdown = 5;
+            if (!gameRunning) startGame();
+        }
 
         // Play AI
         document.getElementById('ai-btn').onclick = () => {
@@ -333,6 +345,7 @@
         }
 
         function startGame() {
+            console.log('Starting game');
             gameRunning = true;
             requestAnimationFrame(gameLoop);
         }
@@ -366,161 +379,165 @@
                 ctx.font = '30px Arial';
                 ctx.fillText(`Starting in ${countdown}...`, canvas.width / 2 - 100, canvas.height / 2);
                 if (Math.floor(Date.now() / 1000) % 1 === 0) countdown--;
-                return;
+            } else if (countdown === 0) {
+                console.log('Countdown finished, game running');
+                countdown = -1;
             }
 
-            ctx.fillStyle = 'white';
-            ctx.font = '16px Arial';
-            ctx.fillText(`You: ${players[playerId]?.lives || 0} lives`, 10, 20);
-            const opponentId = Object.keys(players).find(id => id !== playerId);
-            ctx.fillText(`Opponent: ${players[opponentId]?.lives || 0} lives`, canvas.width - 150, 20);
+            if (countdown <= 0) {
+                ctx.fillStyle = 'white';
+                ctx.font = '16px Arial';
+                ctx.fillText(`You: ${players[playerId]?.lives || 0} lives`, 10, 20);
+                const opponentId = Object.keys(players).find(id => id !== playerId);
+                ctx.fillText(`Opponent: ${players[opponentId]?.lives || 0} lives`, canvas.width - 150, 20);
 
-            let me = players[playerId];
-            if (me) {
-                if (me.health <= 0 && me.lives > 0) {
-                    me.lives--;
-                    me.health = 100;
-                    me.x = playerId === 'human' ? 100 : 700;
-                    me.y = 300;
-                    me.speed = 3;
-                    me.shootCooldown = 0;
-                    flashTimer = 10;
-                    playSound(100, 200);
-                    if (conn) sendData({ type: 'health', id: playerId, health: me.health, lives: me.lives });
-                }
-                if (me.lives <= 0) {
-                    document.getElementById('status').textContent = aiActive ? 'Status: AI wins! Game Over' : 'Status: You lose!';
-                    gameRunning = false;
-                    document.getElementById('restart-btn').style.display = 'block';
-                    return;
-                }
-                const speed = me.speed;
-                if (keys['ArrowLeft'] || keys['a']) me.x -= speed;
-                if (keys['ArrowRight'] || keys['d']) me.x += speed;
-                if (keys['ArrowUp'] || keys['w']) me.y -= speed;
-                if (keys['ArrowDown'] || keys['s']) me.y += speed;
-                if (touchState.moving) {
-                    me.x += touchState.moveX * speed / 25;
-                    me.y += touchState.moveY * speed / 25;
-                }
-                me.x = Math.max(0, Math.min(canvas.width - PLAYER_SIZE, me.x));
-                me.y = Math.max(0, Math.min(canvas.height - PLAYER_SIZE, me.y));
-                if (conn) sendData({ type: 'move', id: playerId, x: me.x, y: me.y });
-            }
-
-            if (aiActive) {
-                const ai = players['ai'];
-                const human = players[playerId];
-                if (ai.health <= 0 && ai.lives > 0) {
-                    ai.lives--;
-                    ai.health = 100;
-                    ai.x = 700;
-                    ai.y = 300;
-                    ai.speed = 3;
-                    ai.shootCooldown = 0;
-                }
-                if (ai.lives <= 0) {
-                    document.getElementById('status').textContent = 'Status: You win! AI defeated';
-                    gameRunning = false;
-                    document.getElementById('restart-btn').style.display = 'block';
-                    return;
-                }
-                bullets.forEach(b => {
-                    if (b.owner !== 'ai' && Math.abs(b.x - ai.x) < 50 && Math.abs(b.y - ai.y) < 50) {
-                        if (b.y > ai.y) ai.y -= 2;
-                        else ai.y += 2;
+                let me = players[playerId];
+                if (me) {
+                    if (me.health <= 0 && me.lives > 0) {
+                        me.lives--;
+                        me.health = 100;
+                        me.x = playerId === 'human' ? 100 : 700;
+                        me.y = 300;
+                        me.speed = 3;
+                        me.shootCooldown = 0;
+                        flashTimer = 10;
+                        playSound(100, 200);
+                        if (conn) sendData({ type: 'health', id: playerId, health: me.health, lives: me.lives });
                     }
-                });
-                if (human.x < ai.x) ai.x -= 1.5;
-                if (human.x > ai.x) ai.x += 1.5;
-                if (human.y < ai.y) ai.y -= 1.5;
-                if (human.y > ai.y) ai.y += 1.5;
-                ai.x = Math.max(0, Math.min(canvas.width - PLAYER_SIZE, ai.x));
-                ai.y = Math.max(0, Math.min(canvas.height - PLAYER_SIZE, ai.y));
-                if (Math.random() < 0.05 && ai.shootCooldown <= 0) {
-                    const bullet = { 
-                        x: ai.x, 
-                        y: ai.y + PLAYER_SIZE / 2, 
-                        owner: 'ai', 
-                        dx: human.x < ai.x ? -BULLET_SPEED : BULLET_SPEED 
-                    };
-                    bullets.push(bullet);
-                    ai.shootCooldown = 20;
-                    playSound(300, 100);
-                }
-                ai.shootCooldown--;
-            }
-
-            if ((keys[' '] || touchState.shooting) && me && me.shootCooldown <= 0) {
-                if (!touchState.shooting || !keys['spacePressed']) {
-                    const bullet = { x: me.x + PLAYER_SIZE, y: me.y + PLAYER_SIZE / 2, owner: playerId, dx: BULLET_SPEED };
-                    bullets.push(bullet);
-                    if (conn) sendData({ type: 'bullet', bullet });
-                    keys['spacePressed'] = true;
-                    me.shootCooldown = 20;
-                    playSound(400, 100);
-                }
-            } else {
-                keys['spacePressed'] = false;
-            }
-            if (me) me.shootCooldown--;
-
-            spawnPowerUp();
-            powerUps = powerUps.filter(p => {
-                for (let id in players) {
-                    let pl = players[id];
-                    if (Math.abs(pl.x - p.x) < PLAYER_SIZE && Math.abs(pl.y - p.y) < PLAYER_SIZE) {
-                        if (p.type === 'speed') pl.speed = 5;
-                        else pl.shootCooldown = -10;
-                        if (conn) sendData({ type: 'powerUp', id: id, speed: pl.speed, shootCooldown: pl.shootCooldown });
-                        return false;
+                    if (me.lives <= 0) {
+                        document.getElementById('status').textContent = aiActive ? 'Status: AI wins! Game Over' : 'Status: You lose!';
+                        gameRunning = false;
+                        document.getElementById('restart-btn').style.display = 'block';
+                        return;
                     }
+                    const speed = me.speed;
+                    if (keys['ArrowLeft'] || keys['a']) me.x -= speed;
+                    if (keys['ArrowRight'] || keys['d']) me.x += speed;
+                    if (keys['ArrowUp'] || keys['w']) me.y -= speed;
+                    if (keys['ArrowDown'] || keys['s']) me.y += speed;
+                    if (touchState.moving) {
+                        me.x += touchState.moveX * speed / 25;
+                        me.y += touchState.moveY * speed / 25;
+                    }
+                    me.x = Math.max(0, Math.min(canvas.width - PLAYER_SIZE, me.x));
+                    me.y = Math.max(0, Math.min(canvas.height - PLAYER_SIZE, me.y));
+                    if (conn) sendData({ type: 'move', id: playerId, x: me.x, y: me.y });
                 }
-                return true;
-            });
 
-            bullets = bullets.filter(b => {
-                b.x += b.dx || BULLET_SPEED;
-                if (b.x > canvas.width || b.x < 0) return false;
-                for (let id in players) {
-                    if (id !== b.owner) {
-                        let p = players[id];
-                        if (b.x >= p.x && b.x <= p.x + PLAYER_SIZE && b.y >= p.y && b.y <= p.y + PLAYER_SIZE) {
-                            p.health -= 10;
-                            if (conn) sendData({ type: 'health', id: id, health: p.health, lives: p.lives });
-                            playSound(200, 150);
+                if (aiActive) {
+                    const ai = players['ai'];
+                    const human = players[playerId];
+                    if (ai.health <= 0 && ai.lives > 0) {
+                        ai.lives--;
+                        ai.health = 100;
+                        ai.x = 700;
+                        ai.y = 300;
+                        ai.speed = 3;
+                        ai.shootCooldown = 0;
+                    }
+                    if (ai.lives <= 0) {
+                        document.getElementById('status').textContent = 'Status: You win! AI defeated';
+                        gameRunning = false;
+                        document.getElementById('restart-btn').style.display = 'block';
+                        return;
+                    }
+                    bullets.forEach(b => {
+                        if (b.owner !== 'ai' && Math.abs(b.x - ai.x) < 50 && Math.abs(b.y - ai.y) < 50) {
+                            if (b.y > ai.y) ai.y -= 2;
+                            else ai.y += 2;
+                        }
+                    });
+                    if (human.x < ai.x) ai.x -= 1.5;
+                    if (human.x > ai.x) ai.x += 1.5;
+                    if (human.y < ai.y) ai.y -= 1.5;
+                    if (human.y > ai.y) ai.y += 1.5;
+                    ai.x = Math.max(0, Math.min(canvas.width - PLAYER_SIZE, ai.x));
+                    ai.y = Math.max(0, Math.min(canvas.height - PLAYER_SIZE, ai.y));
+                    if (Math.random() < 0.05 && ai.shootCooldown <= 0) {
+                        const bullet = { 
+                            x: ai.x, 
+                            y: ai.y + PLAYER_SIZE / 2, 
+                            owner: 'ai', 
+                            dx: human.x < ai.x ? -BULLET_SPEED : BULLET_SPEED 
+                        };
+                        bullets.push(bullet);
+                        ai.shootCooldown = 20;
+                        playSound(300, 100);
+                    }
+                    ai.shootCooldown--;
+                }
+
+                if ((keys[' '] || touchState.shooting) && me && me.shootCooldown <= 0) {
+                    if (!touchState.shooting || !keys['spacePressed']) {
+                        const bullet = { x: me.x + PLAYER_SIZE, y: me.y + PLAYER_SIZE / 2, owner: playerId, dx: BULLET_SPEED };
+                        bullets.push(bullet);
+                        if (conn) sendData({ type: 'bullet', bullet });
+                        keys['spacePressed'] = true;
+                        me.shootCooldown = 20;
+                        playSound(400, 100);
+                    }
+                } else {
+                    keys['spacePressed'] = false;
+                }
+                if (me) me.shootCooldown--;
+
+                spawnPowerUp();
+                powerUps = powerUps.filter(p => {
+                    for (let id in players) {
+                        let pl = players[id];
+                        if (Math.abs(pl.x - p.x) < PLAYER_SIZE && Math.abs(pl.y - p.y) < PLAYER_SIZE) {
+                            if (p.type === 'speed') pl.speed = 5;
+                            else pl.shootCooldown = -10;
+                            if (conn) sendData({ type: 'powerUp', id: id, speed: pl.speed, shootCooldown: pl.shootCooldown });
                             return false;
                         }
                     }
+                    return true;
+                });
+
+                bullets = bullets.filter(b => {
+                    b.x += b.dx || BULLET_SPEED;
+                    if (b.x > canvas.width || b.x < 0) return false;
+                    for (let id in players) {
+                        if (id !== b.owner) {
+                            let p = players[id];
+                            if (b.x >= p.x && b.x <= p.x + PLAYER_SIZE && b.y >= p.y && b.y <= p.y + PLAYER_SIZE) {
+                                p.health -= 10;
+                                if (conn) sendData({ type: 'health', id: id, health: p.health, lives: p.lives });
+                                playSound(200, 150);
+                                return false;
+                            }
+                        }
+                    }
+                    return true;
+                });
+
+                powerUps.forEach(p => {
+                    ctx.fillStyle = p.type === 'speed' ? 'yellow' : 'green';
+                    ctx.beginPath();
+                    ctx.arc(p.x + 10, p.y + 10, 10, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+                for (let id in players) {
+                    const p = players[id];
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    ctx.arc(p.x + PLAYER_SIZE / 2, p.y + PLAYER_SIZE / 2, PLAYER_SIZE / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = 'lime';
+                    ctx.fillRect(p.x, p.y - 10, (p.health / 100) * PLAYER_SIZE, 5);
+                    ctx.strokeStyle = 'white';
+                    ctx.strokeRect(p.x, p.y - 10, PLAYER_SIZE, 5);
                 }
-                return true;
-            });
 
-            powerUps.forEach(p => {
-                ctx.fillStyle = p.type === 'speed' ? 'yellow' : 'green';
-                ctx.beginPath();
-                ctx.arc(p.x + 10, p.y + 10, 10, 0, Math.PI * 2);
-                ctx.fill();
-            });
-
-            for (let id in players) {
-                const p = players[id];
-                ctx.fillStyle = p.color;
-                ctx.beginPath();
-                ctx.arc(p.x + PLAYER_SIZE / 2, p.y + PLAYER_SIZE / 2, PLAYER_SIZE / 2, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.fillStyle = 'lime';
-                ctx.fillRect(p.x, p.y - 10, (p.health / 100) * PLAYER_SIZE, 5);
-                ctx.strokeStyle = 'white';
-                ctx.strokeRect(p.x, p.y - 10, PLAYER_SIZE, 5);
+                ctx.fillStyle = 'white';
+                bullets.forEach(b => {
+                    ctx.fillRect(b.x, b.y, 5, 2);
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                    ctx.fillRect(b.x - 5, b.y, 3, 2);
+                });
             }
-
-            ctx.fillStyle = 'white';
-            bullets.forEach(b => {
-                ctx.fillRect(b.x, b.y, 5, 2);
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-                ctx.fillRect(b.x - 5, b.y, 3, 2);
-            });
 
             if (gameRunning) requestAnimationFrame(gameLoop);
         }
