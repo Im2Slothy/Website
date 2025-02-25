@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>1v1 Shooter with AI</title>
+    <style>
+        canvas { border: 1px solid black; }
+        body { text-align: center; font-family: Arial; }
+    </style>
+</head>
+<body>
+    <h1>1v1 Shooter</h1>
+    <p>Host: Click "Host Game" | Join: Enter Host ID and "Join Game" | Solo: "Play AI"</p>
+    <input id="peer-id" placeholder="Host ID" disabled>
+    <button id="host-btn">Host Game</button>
+    <button id="join-btn">Join Game</button>
+    <button id="ai-btn">Play AI</button>
+    <p id="status">Status: Waiting...</p>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const peer = new Peer();
+        let conn = null;
+        let playerId = null;
+        let players = {};
+        let bullets = [];
+        const PLAYER_SIZE = 20;
+        const BULLET_SPEED = 10;
+        let aiActive = false;
+
+        // Player setup
+        peer.on('open', (id) => {
+            document.getElementById('peer-id').value = id;
+            document.getElementById('status').textContent = `Status: Your ID is ${id}`;
+        });
+
+        // Host game
+        document.getElementById('host-btn').onclick = () => {
+            playerId = peer.id;
+            players[playerId] = { x: 100, y: 300, color: 'red', score: 0 };
+            document.getElementById('peer-id').disabled = false;
+            document.getElementById('status').textContent = 'Status: Hosting... Waiting for opponent';
+        };
+
+        // Join game
+        document.getElementById('join-btn').onclick = () => {
+            const hostId = document.getElementById('peer-id').value;
+            conn = peer.connect(hostId);
+            playerId = peer.id;
+            players[playerId] = { x: 700, y: 300, color: 'blue', score: 0 };
+            conn.on('open', () => {
+                document.getElementById('status').textContent = 'Status: Connected!';
+                startGame();
+            });
+        };
+
+        // Play AI
+        document.getElementById('ai-btn').onclick = () => {
+            if (!playerId) {
+                playerId = 'human';
+                players[playerId] = { x: 100, y: 300, color: 'red', score: 0 };
+            }
+            if (!conn && !aiActive) {
+                const aiId = 'ai';
+                players[aiId] = { x: 700, y: 300, color: 'blue', score: 0 };
+                aiActive = true;
+                document.getElementById('status').textContent = 'Status: Playing against AI';
+                startGame();
+            }
+        };
+
+        // Handle incoming connections
+        peer.on('connection', (connection) => {
+            conn = connection;
+            conn.on('open', () => {
+                if (Object.keys(players).length === 1) {
+                    players[conn.peer] = { x: 700, y: 300, color: 'blue', score: 0 };
+                    document.getElementById('status').textContent = 'Status: Opponent joined!';
+                    aiActive = false; // Disable AI if a human joins
+                    startGame();
+                }
+            });
+            conn.on('data', handleData);
+        });
+
+        // Game logic
+        const keys = {};
+        window.onkeydown = (e) => keys[e.key] = true;
+        window.onkeyup = (e) => keys[e.key] = false;
+
+        function handleData(data) {
+            if (data.type === 'move') {
+                players[data.id] = { ...players[data.id], x: data.x, y: data.y };
+            } else if (data.type === 'bullet') {
+                bullets.push(data.bullet);
+            } else if (data.type === 'score') {
+                players[data.id].score = data.score;
+            }
+        }
+
+        function sendData(data) {
+            if (conn) conn.send(data);
+        }
+
+        function startGame() {
+            requestAnimationFrame(gameLoop);
+        }
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Move human player
+            const speed = 5;
+            let me = players[playerId];
+            if (keys['ArrowLeft'] || keys['a']) me.x -= speed;
+            if (keys['ArrowRight'] || keys['d']) me.x += speed;
+            if (keys['ArrowUp'] || keys['w']) me.y -= speed;
+            if (keys['ArrowDown'] || keys['s']) me.y += speed;
+            me.x = Math.max(0, Math.min(canvas.width - PLAYER_SIZE, me.x));
+            me.y = Math.max(0, Math.min(canvas.height - PLAYER_SIZE, me.y));
+            if (conn) sendData({ type: 'move', id: playerId, x: me.x, y: me.y });
+
+            // AI logic
+            if (aiActive) {
+                const ai = players['ai'];
+                ai.x += Math.random() * 4 - 2; // Random movement
+                ai.y += Math.random() * 4 - 2;
+                ai.x = Math.max(0, Math.min(canvas.width - PLAYER_SIZE, ai.x));
+                ai.y = Math.max(0, Math.min(canvas.height - PLAYER_SIZE, ai.y));
+
+                // AI shooting
+                if (Math.random() < 0.05) { // 5% chance per frame to shoot
+                    const bullet = { x: ai.x + PLAYER_SIZE, y: ai.y + PLAYER_SIZE / 2, owner: 'ai' };
+                    bullets.push(bullet);
+                }
+            }
+
+            // Shoot (human)
+            if (keys[' ']) {
+                if (!keys['spacePressed']) {
+                    const bullet = { x: me.x + PLAYER_SIZE, y: me.y + PLAYER_SIZE / 2, owner: playerId };
+                    bullets.push(bullet);
+                    if (conn) sendData({ type: 'bullet', bullet });
+                    keys['spacePressed'] = true;
+                }
+            } else {
+                keys['spacePressed'] = false;
+            }
+
+            // Update bullets
+            bullets = bullets.filter(b => {
+                b.x += BULLET_SPEED;
+                if (b.x > canvas.width) return false;
+                for (let id in players) {
+                    if (id !== b.owner) {
+                        let p = players[id];
+                        if (b.x >= p.x && b.x <= p.x + PLAYER_SIZE && b.y >= p.y && b.y <= p.y + PLAYER_SIZE) {
+                            p.score++;
+                            if (conn) sendData({ type: 'score', id: id, score: p.score });
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            });
+
+            // Draw players
+            for (let id in players) {
+                ctx.fillStyle = players[id].color;
+                ctx.fillRect(players[id].x, players[id].y, PLAYER_SIZE, PLAYER_SIZE);
+                ctx.fillText(`Score: ${players[id].score}`, players[id].x, players[id].y - 10);
+            }
+
+            // Draw bullets
+            ctx.fillStyle = 'black';
+            bullets.forEach(b => ctx.fillRect(b.x, b.y, 5, 2));
+
+            // Check win
+            for (let id in players) {
+                if (players[id].score >= 5) {
+                    document.getElementById('status').textContent = `Status: ${players[id].color} wins! Refresh to play again.`;
+                    return;
+                }
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+    </script>
+</body>
+</html>
