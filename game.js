@@ -90,6 +90,7 @@ document.getElementById('join-btn').onclick = () => {
             conn.on('open', () => {
                 console.log('Connected to host:', hostId);
                 document.getElementById('status').textContent = 'Status: Connected! Playing...';
+                if (!gameRunning) startGame();
             });
             conn.on('data', handleData);
             conn.on('close', () => {
@@ -102,7 +103,6 @@ document.getElementById('join-btn').onclick = () => {
                 }
             });
             conn.on('error', (err) => console.error('Joiner connection error:', err));
-            if (!gameRunning) startGame();
         });
         peer.on('error', (err) => console.error('Joiner peer error:', err));
     }
@@ -230,11 +230,12 @@ function handleData(data) {
 }
 
 function sendData(data) {
-    if (conn) conn.send(data);
+    if (conn && conn.open) conn.send(data);
 }
 
 function spawnPowerUp() {
-    if (Math.random() < 0.005) {
+    // Only spawn if there are two players or AI is active
+    if ((Object.keys(players).length === 2 || aiActive) && Math.random() < 0.001) {
         powerUps.push({
             x: Math.random() * (canvas.width - 20),
             y: Math.random() * (canvas.height - 20),
@@ -290,7 +291,7 @@ function gameLoop() {
             me.shootCooldown = 0;
             flashTimer = 10;
             playSound(100, 200);
-            if (conn) sendData({ type: 'health', id: playerId, health: me.health, lives: me.lives });
+            if (conn && conn.open) sendData({ type: 'health', id: playerId, health: me.health, lives: me.lives });
         }
         if (me.lives <= 0) {
             document.getElementById('status').textContent = aiActive ? 'Status: AI wins! Game Over' : 'Status: You lose!';
@@ -309,7 +310,7 @@ function gameLoop() {
         }
         me.x = Math.max(0, Math.min(canvas.width - PLAYER_SIZE, me.x));
         me.y = Math.max(0, Math.min(canvas.height - PLAYER_SIZE, me.y));
-        if (conn) sendData({ type: 'move', id: playerId, x: me.x, y: me.y });
+        if (conn && conn.open) sendData({ type: 'move', id: playerId, x: me.x, y: me.y });
     }
 
     if (aiActive) {
@@ -359,7 +360,7 @@ function gameLoop() {
         if (!touchState.shooting || !keys['spacePressed']) {
             const bullet = { x: me.x + PLAYER_SIZE, y: me.y + PLAYER_SIZE / 2, owner: playerId, dx: BULLET_SPEED };
             bullets.push(bullet);
-            if (conn) sendData({ type: 'bullet', bullet });
+            if (conn && conn.open) sendData({ type: 'bullet', bullet });
             keys['spacePressed'] = true;
             me.shootCooldown = 20;
             playSound(400, 100);
@@ -376,7 +377,7 @@ function gameLoop() {
             if (Math.abs(pl.x - p.x) < PLAYER_SIZE && Math.abs(pl.y - p.y) < PLAYER_SIZE) {
                 if (p.type === 'speed') pl.speed = 5;
                 else pl.shootCooldown = -10;
-                if (conn) sendData({ type: 'powerUp', id: id, speed: pl.speed, shootCooldown: pl.shootCooldown });
+                if (conn && conn.open) sendData({ type: 'powerUp', id: id, speed: pl.speed, shootCooldown: pl.shootCooldown });
                 return false;
             }
         }
@@ -391,7 +392,7 @@ function gameLoop() {
                 let p = players[id];
                 if (b.x >= p.x && b.x <= p.x + PLAYER_SIZE && b.y >= p.y && b.y <= p.y + PLAYER_SIZE) {
                     p.health -= 10;
-                    if (conn) sendData({ type: 'health', id: id, health: p.health, lives: p.lives });
+                    if (conn && conn.open) sendData({ type: 'health', id: id, health: p.health, lives: p.lives });
                     playSound(200, 150);
                     return false;
                 }
