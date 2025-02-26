@@ -61,6 +61,8 @@ document.getElementById('host-btn').onclick = () => {
                 console.log('Connection opened on host');
                 players[conn.peer] = { x: 700, y: 300, color: 'cyan', health: 100, speed: 3, shootCooldown: 0, lives: 3, angle: 0 };
                 document.getElementById('status').textContent = 'Status: Opponent joined! Playing...';
+                // Send initial state to joiner
+                conn.send({ type: 'init', players });
                 if (!gameRunning) startGame();
             });
             conn.on('data', handleData);
@@ -68,8 +70,7 @@ document.getElementById('host-btn').onclick = () => {
                 console.log('Opponent disconnected from host');
                 if (gameRunning) {
                     document.getElementById('status').textContent = 'Status: Opponent disconnected. You win!';
-                    gameRunning = false;
-                    document.getElementById('restart-btn').style.display = 'block';
+                    setTimeout(() => location.reload(), 1000);
                 }
             });
             conn.on('error', (err) => console.error('Host connection error:', err));
@@ -104,9 +105,7 @@ document.getElementById('join-btn').onclick = () => {
                 console.log('Disconnected from host');
                 if (gameRunning) {
                     document.getElementById('status').textContent = 'Status: Opponent disconnected. You win!';
-                    gameRunning = false;
-                    delete players[Object.keys(players).find(id => id !== playerId)];
-                    document.getElementById('restart-btn').style.display = 'block';
+                    setTimeout(() => location.reload(), 1000);
                 }
             });
             conn.on('error', (err) => console.error('Joiner connection error:', err));
@@ -128,26 +127,6 @@ document.getElementById('ai-btn').onclick = () => {
         document.getElementById('status').textContent = 'Status: Playing against AI';
         if (!gameRunning) startGame();
     }
-};
-
-// Restart game
-document.getElementById('restart-btn').onclick = () => {
-    players = {};
-    bullets = [];
-    powerUps = [];
-    aiActive = false;
-    gameRunning = false;
-    playerId = null;
-    peer = null;
-    conn = null;
-    document.getElementById('peer-id').value = '';
-    document.getElementById('peer-id').disabled = false;
-    document.getElementById('status').textContent = 'Status: Waiting...';
-    document.getElementById('restart-btn').style.display = 'none';
-    document.getElementById('chat-box').innerHTML = '';
-    joystick.style.left = '25px';
-    joystick.style.top = '25px';
-    touchState = { moving: false, shooting: false };
 };
 
 // Chat
@@ -233,7 +212,9 @@ window.onkeydown = (e) => keys[e.key] = true;
 window.onkeyup = (e) => keys[e.key] = false;
 
 function handleData(data) {
-    if (data.type === 'move') {
+    if (data.type === 'init') {
+        players = { ...players, ...data.players };
+    } else if (data.type === 'move') {
         players[data.id] = { ...players[data.id], x: data.x, y: data.y, angle: data.angle };
     } else if (data.type === 'bullet') {
         bullets.push(data.bullet);
@@ -343,7 +324,7 @@ function gameLoop() {
         if (me.lives <= 0) {
             document.getElementById('status').textContent = aiActive ? 'Status: AI wins! Game Over' : 'Status: You lose!';
             gameRunning = false;
-            document.getElementById('restart-btn').style.display = 'block';
+            setTimeout(() => location.reload(), 1000);
             return;
         }
 
@@ -377,6 +358,9 @@ function gameLoop() {
             const dx = mouseX - (me.x + PLAYER_SIZE / 2);
             const dy = mouseY - (me.y + PLAYER_SIZE / 2);
             me.angle = Math.atan2(dy, dx);
+        } else {
+            // Default aiming right on mobile unless we add touch aiming
+            me.angle = 0;
         }
 
         // Shooting with MB1 or Shoot button
@@ -391,7 +375,6 @@ function gameLoop() {
             };
             bullets.push(bullet);
             if (conn && conn.open) sendData({ type: 'bullet', bullet });
-            touchState.shooting = false; // Reset to prevent continuous firing
             me.shootCooldown = 20;
             playSound(400, 100);
         }
@@ -413,7 +396,7 @@ function gameLoop() {
         if (ai.lives <= 0) {
             document.getElementById('status').textContent = 'Status: You win! AI defeated';
             gameRunning = false;
-            document.getElementById('restart-btn').style.display = 'block';
+            setTimeout(() => location.reload(), 1000);
             return;
         }
         bullets.forEach(b => {

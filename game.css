@@ -19,10 +19,6 @@ canvas {
     font-size: 14px; 
     margin-top: 10px; 
 }
-#restart-btn { 
-    display: none; 
-    margin-top: 10px; 
-}
 #chat-box { 
     height: 80px; 
     overflow-y: auto; 
@@ -71,11 +67,15 @@ button, input {
     font-size: 16px;
     font-weight: bold;
     border: 2px solid white;
-    display: none; /* Hidden by default, shown on mobile */
+    display: none; /* Hidden by default */
     touch-action: none; /* Prevents default touch actions */
 }
+/* Show controls on mobile and tablets */
 @media (max-width: 1024px) {
+    #controls {
+        display: block;
+    }
     #shoot-btn {
-        display: block; /* Show on mobile and tablets */
+        display: block;
     }
 }
