@@ -37,14 +37,19 @@ function playSound(freq, duration) {
     setTimeout(() => osc.stop(), duration);
 }
 
+// Generate 4-digit lobby ID
+function generateLobbyId() {
+    return Math.floor(1000 + Math.random() * 9000).toString();
+}
+
 // Host game
 document.getElementById('host-btn').onclick = () => {
     if (!peer) {
-        peer = new Peer();
+        peer = new Peer(generateLobbyId());
         peer.on('open', (id) => {
             console.log('Host ID generated:', id);
             playerId = id;
-            players[playerId] = { x: 100, y: 300, color: 'red', health: 100, speed: 3, shootCooldown: 0, lives: 3 };
+            players[playerId] = { x: 100, y: 300, color: 'red', health: 100, speed: 3, shootCooldown: 0, lives: 3, angle: 0 };
             document.getElementById('peer-id').value = id;
             document.getElementById('peer-id').disabled = true;
             document.getElementById('status').textContent = 'Status: Hosting...';
@@ -54,7 +59,7 @@ document.getElementById('host-btn').onclick = () => {
             conn = connection;
             conn.on('open', () => {
                 console.log('Connection opened on host');
-                players[conn.peer] = { x: 700, y: 300, color: 'cyan', health: 100, speed: 3, shootCooldown: 0, lives: 3 };
+                players[conn.peer] = { x: 700, y: 300, color: 'cyan', health: 100, speed: 3, shootCooldown: 0, lives: 3, angle: 0 };
                 document.getElementById('status').textContent = 'Status: Opponent joined! Playing...';
                 if (!gameRunning) startGame();
             });
@@ -64,7 +69,6 @@ document.getElementById('host-btn').onclick = () => {
                 if (gameRunning) {
                     document.getElementById('status').textContent = 'Status: Opponent disconnected. You win!';
                     gameRunning = false;
-                    delete players[conn.peer];
                     document.getElementById('restart-btn').style.display = 'block';
                 }
             });
@@ -82,11 +86,11 @@ document.getElementById('join-btn').onclick = () => {
             document.getElementById('status').textContent = 'Status: Enter a valid Host ID!';
             return;
         }
-        peer = new Peer();
+        peer = new Peer(generateLobbyId());
         peer.on('open', (id) => {
             console.log('Joiner ID generated:', id);
             playerId = id;
-            players[playerId] = { x: 700, y: 300, color: 'cyan', health: 100, speed: 3, shootCooldown: 0, lives: 3 };
+            players[playerId] = { x: 700, y: 300, color: 'cyan', health: 100, speed: 3, shootCooldown: 0, lives: 3, angle: 0 };
             document.getElementById('peer-id').disabled = true;
             document.getElementById('status').textContent = 'Status: Connecting...';
             conn = peer.connect(hostId);
@@ -115,11 +119,11 @@ document.getElementById('join-btn').onclick = () => {
 document.getElementById('ai-btn').onclick = () => {
     if (!playerId) {
         playerId = 'human';
-        players[playerId] = { x: 100, y: 300, color: 'red', health: 100, speed: 3, shootCooldown: 0, lives: 3 };
+        players[playerId] = { x: 100, y: 300, color: 'red', health: 100, speed: 3, shootCooldown: 0, lives: 3, angle: 0 };
     }
     if (!conn && !aiActive) {
         const aiId = 'ai';
-        players[aiId] = { x: 700, y: 300, color: 'cyan', health: 100, speed: 3, shootCooldown: 0, lives: 3 };
+        players[aiId] = { x: 700, y: 300, color: 'cyan', health: 100, speed: 3, shootCooldown: 0, lives: 3, angle: 0 };
         aiActive = true;
         document.getElementById('status').textContent = 'Status: Playing against AI';
         if (!gameRunning) startGame();
@@ -156,11 +160,13 @@ document.getElementById('chat-input').onkeydown = (e) => {
     }
 };
 
-// Touch controls (only on mobile)
+// Mouse and touch controls
 const controls = document.getElementById('controls');
 const joystick = document.getElementById('joystick');
 let touchState = { moving: false, shooting: false, moveX: 0, moveY: 0 };
+let mouseX = 0, mouseY = 0;
 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
 if (isMobile) {
     controls.style.display = 'block';
     controls.addEventListener('touchstart', (e) => {
@@ -196,18 +202,17 @@ if (isMobile) {
         joystick.style.left = '25px';
         joystick.style.top = '25px';
     });
-    canvas.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        const touch = e.touches[0];
-        if (touch.clientX > canvas.width / 2) {
-            touchState.shooting = true;
-        }
+} else {
+    canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        mouseX = e.clientX - rect.left;
+        mouseY = e.clientY - rect.top;
     });
-    canvas.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        if (e.touches.length === 0 || e.touches[0].clientX <= canvas.width / 2) {
-            touchState.shooting = false;
-        }
+    canvas.addEventListener('mousedown', (e) => {
+        if (e.button === 0) touchState.shooting = true;
+    });
+    canvas.addEventListener('mouseup', (e) => {
+        if (e.button === 0) touchState.shooting = false;
     });
 }
 
@@ -218,7 +223,7 @@ window.onkeyup = (e) => keys[e.key] = false;
 
 function handleData(data) {
     if (data.type === 'move') {
-        players[data.id] = { ...players[data.id], x: data.x, y: data.y };
+        players[data.id] = { ...players[data.id], x: data.x, y: data.y, angle: data.angle };
     } else if (data.type === 'bullet') {
         bullets.push(data.bullet);
     } else if (data.type === 'health') {
@@ -244,6 +249,13 @@ function spawnPowerUp() {
             type: Math.random() < 0.5 ? 'speed' : 'rapid'
         });
     }
+}
+
+function checkCollision(x1, y1, x2, y2) {
+    const dx = x1 - x2;
+    const dy = y1 - y2;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    return distance < PLAYER_SIZE;
 }
 
 function startGame() {
@@ -301,18 +313,60 @@ function gameLoop() {
             document.getElementById('restart-btn').style.display = 'block';
             return;
         }
+
+        // Movement with collision
         const speed = me.speed;
-        if (keys['ArrowLeft'] || keys['a']) me.x -= speed;
-        if (keys['ArrowRight'] || keys['d']) me.x += speed;
-        if (keys['ArrowUp'] || keys['w']) me.y -= speed;
-        if (keys['ArrowDown'] || keys['s']) me.y += speed;
+        let newX = me.x;
+        let newY = me.y;
+        if (keys['ArrowLeft'] || keys['a']) newX -= speed;
+        if (keys['ArrowRight'] || keys['d']) newX += speed;
+        if (keys['ArrowUp'] || keys['w']) newY -= speed;
+        if (keys['ArrowDown'] || keys['s']) newY += speed;
         if (touchState.moving) {
-            me.x += touchState.moveX * speed / 25;
-            me.y += touchState.moveY * speed / 25;
+            newX += touchState.moveX * speed / 25;
+            newY += touchState.moveY * speed / 25;
         }
-        me.x = Math.max(0, Math.min(canvas.width - PLAYER_SIZE, me.x));
-        me.y = Math.max(0, Math.min(canvas.height - PLAYER_SIZE, me.y));
-        if (conn && conn.open) sendData({ type: 'move', id: playerId, x: me.x, y: me.y });
+        newX = Math.max(0, Math.min(canvas.width - PLAYER_SIZE, newX));
+        newY = Math.max(0, Math.min(canvas.height - PLAYER_SIZE, newY));
+
+        // Check collision with other players
+        let canMove = true;
+        for (let id in players) {
+            if (id !== playerId && checkCollision(newX, newY, players[id].x, players[id].y)) {
+                canMove = false;
+                break;
+            }
+        }
+        if (canMove) {
+            me.x = newX;
+            me.y = newY;
+        }
+
+        // Aiming with mouse
+        if (!isMobile) {
+            const dx = mouseX - (me.x + PLAYER_SIZE / 2);
+            const dy = mouseY - (me.y + PLAYER_SIZE / 2);
+            me.angle = Math.atan2(dy, dx);
+        }
+
+        // Shooting with MB1
+        if (touchState.shooting && me.shootCooldown <= 0) {
+            const angle = me.angle || 0; // Use mouse angle on desktop, default to right on mobile
+            const bullet = { 
+                x: me.x + PLAYER_SIZE / 2 + Math.cos(angle) * PLAYER_SIZE, 
+                y: me.y + PLAYER_SIZE / 2 + Math.sin(angle) * PLAYER_SIZE, 
+                owner: playerId, 
+                dx: Math.cos(angle) * BULLET_SPEED, 
+                dy: Math.sin(angle) * BULLET_SPEED 
+            };
+            bullets.push(bullet);
+            if (conn && conn.open) sendData({ type: 'bullet', bullet });
+            touchState.shooting = false; // Reset to prevent continuous firing
+            me.shootCooldown = 20;
+            playSound(400, 100);
+        }
+        if (me) me.shootCooldown--;
+        if (conn && conn.open) sendData({ type: 'move', id: playerId, x: me.x, y: me.y, angle: me.angle });
     }
 
     if (aiActive) {
@@ -344,12 +398,19 @@ function gameLoop() {
         if (human.y > ai.y) ai.y += 1.5;
         ai.x = Math.max(0, Math.min(canvas.width - PLAYER_SIZE, ai.x));
         ai.y = Math.max(0, Math.min(canvas.height - PLAYER_SIZE, ai.y));
+
+        // AI aiming at human
+        const dx = human.x - ai.x;
+        const dy = human.y - ai.y;
+        ai.angle = Math.atan2(dy, dx);
+
         if (Math.random() < 0.05 && ai.shootCooldown <= 0) {
             const bullet = { 
-                x: ai.x, 
-                y: ai.y + PLAYER_SIZE / 2, 
+                x: ai.x + PLAYER_SIZE / 2 + Math.cos(ai.angle) * PLAYER_SIZE, 
+                y: ai.y + PLAYER_SIZE / 2 + Math.sin(ai.angle) * PLAYER_SIZE, 
                 owner: 'ai', 
-                dx: human.x < ai.x ? -BULLET_SPEED : BULLET_SPEED 
+                dx: Math.cos(ai.angle) * BULLET_SPEED, 
+                dy: Math.sin(ai.angle) * BULLET_SPEED 
             };
             bullets.push(bullet);
             ai.shootCooldown = 20;
@@ -357,20 +418,6 @@ function gameLoop() {
         }
         ai.shootCooldown--;
     }
-
-    if ((keys[' '] || touchState.shooting) && me && me.shootCooldown <= 0) {
-        if (!touchState.shooting || !keys['spacePressed']) {
-            const bullet = { x: me.x + PLAYER_SIZE, y: me.y + PLAYER_SIZE / 2, owner: playerId, dx: BULLET_SPEED };
-            bullets.push(bullet);
-            if (conn && conn.open) sendData({ type: 'bullet', bullet });
-            keys['spacePressed'] = true;
-            me.shootCooldown = 20;
-            playSound(400, 100);
-        }
-    } else {
-        keys['spacePressed'] = false;
-    }
-    if (me) me.shootCooldown--;
 
     spawnPowerUp();
     powerUps = powerUps.filter(p => {
@@ -387,8 +434,9 @@ function gameLoop() {
     });
 
     bullets = bullets.filter(b => {
-        b.x += b.dx || BULLET_SPEED;
-        if (b.x > canvas.width || b.x < 0) return false;
+        b.x += b.dx;
+        b.y += b.dy;
+        if (b.x > canvas.width || b.x < 0 || b.y > canvas.height || b.y < 0) return false;
         for (let id in players) {
             if (id !== b.owner) {
                 let p = players[id];
@@ -416,8 +464,19 @@ function gameLoop() {
         ctx.beginPath();
         ctx.arc(p.x + PLAYER_SIZE / 2, p.y + PLAYER_SIZE / 2, PLAYER_SIZE / 2, 0, Math.PI * 2);
         ctx.fill();
+
+        // Draw aiming arrow
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.moveTo(p.x + PLAYER_SIZE / 2 + Math.cos(p.angle) * PLAYER_SIZE, p.y + PLAYER_SIZE / 2 + Math.sin(p.angle) * PLAYER_SIZE);
+        ctx.lineTo(p.x + PLAYER_SIZE / 2 + Math.cos(p.angle + Math.PI / 6) * 10, p.y + PLAYER_SIZE / 2 + Math.sin(p.angle + Math.PI / 6) * 10);
+        ctx.lineTo(p.x + PLAYER_SIZE / 2 + Math.cos(p.angle - Math.PI / 6) * 10, p.y + PLAYER_SIZE / 2 + Math.sin(p.angle - Math.PI / 6) * 10);
+        ctx.closePath();
+        ctx.fill();
+
+        // Health bar (clamped to not overflow)
         ctx.fillStyle = 'lime';
-        ctx.fillRect(p.x, p.y - 10, (p.health / 100) * PLAYER_SIZE, 5);
+        ctx.fillRect(p.x, p.y - 10, Math.max(0, Math.min(p.health / 100 * PLAYER_SIZE, PLAYER_SIZE)), 5);
         ctx.strokeStyle = 'white';
         ctx.strokeRect(p.x, p.y - 10, PLAYER_SIZE, 5);
     }
