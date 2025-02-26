@@ -8,12 +8,16 @@ window.onload = () => {
     let bullets = [];
     let powerUps = [];
     let particles = [];
+    const BASE_WIDTH = 800; // Base design width
+    const BASE_HEIGHT = 600; // Base design height
+    let scaleFactor = 1; // For scaling obstacles and positions
+
     const obstacles = [
-        { x: 200, y: 150, width: 100, height: 20 },
-        { x: 500, y: 150, width: 100, height: 20 },
-        { x: 350, y: 300, width: 20, height: 150 },
-        { x: 200, y: 450, width: 100, height: 20 },
-        { x: 500, y: 450, width: 100, height: 20 }
+        { x: 0.25, y: 0.25, width: 0.125, height: 0.033 }, // Top-middle horizontal (relative to canvas)
+        { x: 0.625, y: 0.25, width: 0.125, height: 0.033 }, // Top-right horizontal
+        { x: 0.4375, y: 0.5, width: 0.025, height: 0.25 },  // Center vertical
+        { x: 0.25, y: 0.75, width: 0.125, height: 0.033 }, // Bottom-left horizontal
+        { x: 0.625, y: 0.75, width: 0.125, height: 0.033 } // Bottom-right horizontal
     ];
     const PLAYER_SIZE = 20;
     const BULLET_SPEED = 600;
@@ -26,15 +30,41 @@ window.onload = () => {
     let lastTime = performance.now();
 
     const keys = {};
-    window.onkeydown = (e) => keys[e.key] = true;
-    window.onkeyup = (e) => keys[e.key] = false;
+    window.onkeydown = (e) => {
+        keys[e.key] = true;
+        console.log('Key down:', e.key, 'Shift:', e.shiftKey);
+    };
+    window.onkeyup = (e) => {
+        keys[e.key] = false;
+        if (e.key === 'Shift') {
+            keys['ArrowUp'] = false;
+            keys['ArrowDown'] = false;
+            keys['ArrowLeft'] = false;
+            keys['ArrowRight'] = false;
+            keys['w'] = false;
+            keys['s'] = false;
+            keys['a'] = false;
+            keys['d'] = false;
+        }
+        console.log('Key up:', e.key, 'Shift:', e.shiftKey);
+    };
 
     function resizeCanvas() {
         const maxWidth = window.innerWidth - 20;
-        const maxHeight = window.innerHeight - 200;
-        const aspectRatio = 800 / 600;
-        canvas.width = Math.min(maxWidth, maxHeight * aspectRatio);
-        canvas.height = canvas.width / aspectRatio;
+        const maxHeight = window.innerHeight - 100; // Reduced to fit mobile better
+        const aspectRatio = BASE_WIDTH / BASE_HEIGHT;
+
+        // Calculate scaled dimensions
+        let newWidth = maxWidth;
+        let newHeight = newWidth / aspectRatio;
+        if (newHeight > maxHeight) {
+            newHeight = maxHeight;
+            newWidth = newHeight * aspectRatio;
+        }
+
+        canvas.width = newWidth;
+        canvas.height = newHeight;
+        scaleFactor = newWidth / BASE_WIDTH; // Scale factor for obstacles and positions
     }
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
@@ -62,7 +92,7 @@ window.onload = () => {
             peer.on('open', (id) => {
                 console.log('Host ID generated:', id);
                 playerId = id;
-                players[playerId] = { x: 100, y: 300, color: 'red', health: 100, speed: PLAYER_SPEED, shootCooldown: 0, lives: 3, angle: 0, shield: 0 };
+                players[playerId] = { x: 100 * scaleFactor, y: 300 * scaleFactor, color: 'red', health: 100, speed: PLAYER_SPEED, shootCooldown: 0, lives: 3, angle: 0, shield: 0 };
                 document.getElementById('peer-id').value = id;
                 document.getElementById('peer-id').disabled = true;
                 document.getElementById('status').textContent = 'Status: Hosting...';
@@ -72,7 +102,7 @@ window.onload = () => {
                 conn = connection;
                 conn.on('open', () => {
                     console.log('Connection opened on host');
-                    players[conn.peer] = { x: 700, y: 300, color: 'cyan', health: 100, speed: PLAYER_SPEED, shootCooldown: 0, lives: 3, angle: 0, shield: 0 };
+                    players[conn.peer] = { x: 700 * scaleFactor, y: 300 * scaleFactor, color: 'cyan', health: 100, speed: PLAYER_SPEED, shootCooldown: 0, lives: 3, angle: 0, shield: 0 };
                     document.getElementById('status').textContent = 'Status: Opponent joined! Playing...';
                     conn.send({ type: 'init', players });
                     if (!gameRunning) startGame();
@@ -82,7 +112,7 @@ window.onload = () => {
                     console.log('Opponent disconnected from host');
                     if (gameRunning) {
                         document.getElementById('status').textContent = 'Status: Opponent disconnected. You win!';
-                        setTimeout(() => location.reload(), 10000); // Changed to 10 seconds
+                        setTimeout(() => location.reload(), 10000);
                     }
                 });
                 conn.on('error', (err) => console.error('Host connection error:', err));
@@ -102,7 +132,7 @@ window.onload = () => {
             peer.on('open', (id) => {
                 console.log('Joiner ID generated:', id);
                 playerId = id;
-                players[playerId] = { x: 700, y: 300, color: 'cyan', health: 100, speed: PLAYER_SPEED, shootCooldown: 0, lives: 3, angle: 0, shield: 0 };
+                players[playerId] = { x: 700 * scaleFactor, y: 300 * scaleFactor, color: 'cyan', health: 100, speed: PLAYER_SPEED, shootCooldown: 0, lives: 3, angle: 0, shield: 0 };
                 document.getElementById('peer-id').disabled = true;
                 document.getElementById('status').textContent = 'Status: Connecting...';
                 conn = peer.connect(hostId);
@@ -116,7 +146,7 @@ window.onload = () => {
                     console.log('Disconnected from host');
                     if (gameRunning) {
                         document.getElementById('status').textContent = 'Status: Opponent disconnected. You win!';
-                        setTimeout(() => location.reload(), 10000); // Changed to 10 seconds
+                        setTimeout(() => location.reload(), 10000);
                     }
                 });
                 conn.on('error', (err) => console.error('Joiner connection error:', err));
@@ -128,11 +158,11 @@ window.onload = () => {
     document.getElementById('ai-btn').onclick = () => {
         if (!playerId) {
             playerId = 'human';
-            players[playerId] = { x: 100, y: 300, color: 'red', health: 100, speed: PLAYER_SPEED, shootCooldown: 0, lives: 3, angle: 0, shield: 0 };
+            players[playerId] = { x: 100 * scaleFactor, y: 300 * scaleFactor, color: 'red', health: 100, speed: PLAYER_SPEED, shootCooldown: 0, lives: 3, angle: 0, shield: 0 };
         }
         if (!conn && !aiActive) {
             const aiId = 'ai';
-            players[aiId] = { x: 700, y: 300, color: 'cyan', health: 100, speed: AI_SPEED, shootCooldown: 0, lives: 3, angle: 0, shield: 0 };
+            players[aiId] = { x: 700 * scaleFactor, y: 300 * scaleFactor, color: 'cyan', health: 100, speed: AI_SPEED, shootCooldown: 0, lives: 3, angle: 0, shield: 0 };
             aiActive = true;
             document.getElementById('status').textContent = 'Status: Playing against AI';
             if (!gameRunning) startGame();
@@ -282,8 +312,8 @@ window.onload = () => {
                 x = Math.random() * (canvas.width - 20);
                 y = Math.random() * (canvas.height - 20);
                 valid = !obstacles.some(o => 
-                    x + 10 > o.x && x - 10 < o.x + o.width &&
-                    y + 10 > o.y && y - 10 < o.y + o.height
+                    x + 10 > o.x * canvas.width && x - 10 < (o.x + o.width) * canvas.width &&
+                    y + 10 > o.y * canvas.height && y - 10 < (o.y + o.height) * canvas.height
                 );
             } while (!valid);
             powerUps.push({ x, y, type: types[Math.floor(Math.random() * types.length)] });
@@ -312,9 +342,9 @@ window.onload = () => {
             const circleX = x1 + PLAYER_SIZE / 2;
             const circleY = y1 + PLAYER_SIZE / 2;
             const rectLeft = x2;
-            const rectRight = x2 + w2;
+            const rectRight = x2 + w2 * canvas.width;
             const rectTop = y2;
-            const rectBottom = y2 + h2;
+            const rectBottom = y2 + h2 * canvas.height;
 
             const closestX = Math.max(rectLeft, Math.min(circleX, rectRight));
             const closestY = Math.max(rectTop, Math.min(circleY, rectBottom));
@@ -349,10 +379,10 @@ window.onload = () => {
     function resolveObstacleCollision(entity, obstacle) {
         const circleX = entity.x + PLAYER_SIZE / 2;
         const circleY = entity.y + PLAYER_SIZE / 2;
-        const rectLeft = obstacle.x;
-        const rectRight = obstacle.x + obstacle.width;
-        const rectTop = obstacle.y;
-        const rectBottom = obstacle.y + obstacle.height;
+        const rectLeft = obstacle.x * canvas.width;
+        const rectRight = (obstacle.x + obstacle.width) * canvas.width;
+        const rectTop = obstacle.y * canvas.height;
+        const rectBottom = (obstacle.y + obstacle.height) * canvas.height;
 
         const closestX = Math.max(rectLeft, Math.min(circleX, rectRight));
         const closestY = Math.max(rectTop, Math.min(circleY, rectBottom));
@@ -393,13 +423,13 @@ window.onload = () => {
         }
 
         ctx.strokeStyle = '#333';
-        for (let i = 0; i < canvas.width; i += 50) {
+        for (let i = 0; i < canvas.width; i += 50 * scaleFactor) {
             ctx.beginPath();
             ctx.moveTo(i, 0);
             ctx.lineTo(i, canvas.height);
             ctx.stroke();
         }
-        for (let i = 0; i < canvas.height; i += 50) {
+        for (let i = 0; i < canvas.height; i += 50 * scaleFactor) {
             ctx.beginPath();
             ctx.moveTo(0, i);
             ctx.lineTo(canvas.width, i);
@@ -408,22 +438,22 @@ window.onload = () => {
 
         ctx.fillStyle = 'gray';
         obstacles.forEach(o => {
-            ctx.fillRect(o.x, o.y, o.width, o.height);
+            ctx.fillRect(o.x * canvas.width, o.y * canvas.height, o.width * canvas.width, o.height * canvas.height);
         });
 
         ctx.fillStyle = 'white';
-        ctx.font = '16px Arial';
-        ctx.fillText(`You: ${players[playerId]?.lives || 0} lives`, 10, 20);
+        ctx.font = `${16 * scaleFactor}px Arial`; // Scale text
+        ctx.fillText(`You: ${players[playerId]?.lives || 0} lives`, 10 * scaleFactor, 20 * scaleFactor);
         const opponentId = Object.keys(players).find(id => id !== playerId);
-        ctx.fillText(`Opponent: ${players[opponentId]?.lives || 0} lives`, canvas.width - 150, 20);
+        ctx.fillText(`Opponent: ${players[opponentId]?.lives || 0} lives`, canvas.width - 150 * scaleFactor, 20 * scaleFactor);
 
         let me = players[playerId];
         if (me) {
             if (me.health <= 0 && me.lives > 0) {
                 me.lives--;
                 me.health = 100;
-                me.x = playerId === 'human' ? 100 : 700;
-                me.y = 300;
+                me.x = playerId === 'human' ? 100 * scaleFactor : 700 * scaleFactor;
+                me.y = 300 * scaleFactor;
                 me.speed = PLAYER_SPEED;
                 me.shootCooldown = 0;
                 me.shield = 0;
@@ -434,7 +464,7 @@ window.onload = () => {
             if (me.lives <= 0) {
                 document.getElementById('status').textContent = aiActive ? 'Status: AI wins! Game Over' : 'Status: You lose!';
                 gameRunning = false;
-                setTimeout(() => location.reload(), 10000); // Changed to 10 seconds
+                setTimeout(() => location.reload(), 10000);
                 return;
             }
 
@@ -511,8 +541,8 @@ window.onload = () => {
             if (ai.health <= 0 && ai.lives > 0) {
                 ai.lives--;
                 ai.health = 100;
-                ai.x = 700;
-                ai.y = 300;
+                ai.x = 700 * scaleFactor;
+                ai.y = 300 * scaleFactor;
                 ai.speed = AI_SPEED;
                 ai.shootCooldown = 0;
                 ai.shield = 0;
@@ -520,7 +550,7 @@ window.onload = () => {
             if (ai.lives <= 0) {
                 document.getElementById('status').textContent = 'Status: You win! AI defeated';
                 gameRunning = false;
-                setTimeout(() => location.reload(), 10000); // Changed to 10 seconds
+                setTimeout(() => location.reload(), 10000);
                 return;
             }
             let velX = 0;
@@ -588,7 +618,8 @@ window.onload = () => {
         bullets = bullets.filter(b => {
             if (b.x > canvas.width || b.x < 0 || b.y > canvas.height || b.y < 0) return false;
             for (let o of obstacles) {
-                if (b.x >= o.x && b.x <= o.x + o.width && b.y >= o.y && b.y <= o.y + o.height) {
+                if (b.x >= o.x * canvas.width && b.x <= (o.x + o.width) * canvas.width && 
+                    b.y >= o.y * canvas.height && b.y <= (o.y + o.height) * canvas.height) {
                     return false;
                 }
             }
@@ -619,7 +650,7 @@ window.onload = () => {
         powerUps.forEach(p => {
             ctx.fillStyle = p.type === 'speed' ? 'yellow' : p.type === 'rapid' ? 'green' : p.type === 'shield' ? 'blue' : p.type === 'multi' ? 'purple' : 'orange';
             ctx.beginPath();
-            ctx.arc(p.x + 10, p.y + 10, 10, 0, Math.PI * 2);
+            ctx.arc(p.x, p.y, 10, 0, Math.PI * 2); // No scaling here, keep power-up size fixed
             ctx.fill();
         });
 
@@ -639,9 +670,9 @@ window.onload = () => {
             }
 
             ctx.fillStyle = 'white';
-            ctx.font = '12px Arial';
+            ctx.font = `${12 * scaleFactor}px Arial`; // Scale text
             ctx.textAlign = 'center';
-            ctx.fillText(id.slice(0, 5), p.x + PLAYER_SIZE / 2, p.y - 15);
+            ctx.fillText(id.slice(0, 5), p.x + PLAYER_SIZE / 2, p.y - 15 * scaleFactor);
 
             ctx.fillStyle = 'white';
             ctx.beginPath();
@@ -652,22 +683,22 @@ window.onload = () => {
             ctx.fill();
 
             ctx.fillStyle = 'lime';
-            ctx.fillRect(p.x, p.y - 10, Math.max(0, Math.min(p.health / 100 * PLAYER_SIZE, PLAYER_SIZE)), 5);
+            ctx.fillRect(p.x, p.y - 10 * scaleFactor, Math.max(0, Math.min(p.health / 100 * PLAYER_SIZE, PLAYER_SIZE)), 5 * scaleFactor);
             ctx.strokeStyle = 'white';
-            ctx.strokeRect(p.x, p.y - 10, PLAYER_SIZE, 5);
+            ctx.strokeRect(p.x, p.y - 10 * scaleFactor, PLAYER_SIZE, 5 * scaleFactor);
         }
 
         ctx.fillStyle = 'white';
         bullets.forEach(b => {
-            ctx.fillRect(b.x, b.y, 5, 2);
+            ctx.fillRect(b.x, b.y, 5, 2); // Bullet size fixed, not scaled
             ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
             ctx.fillRect(b.x - 5, b.y, 3, 2);
         });
-        // God is good. Amen!
+
         ctx.fillStyle = 'red';
         particles.forEach(p => {
             ctx.beginPath();
-            ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+            ctx.arc(p.x, p.y, 2, 0, Math.PI * 2); // Particle size fixed
             ctx.fill();
         });
 
