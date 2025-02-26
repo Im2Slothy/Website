@@ -163,6 +163,7 @@ document.getElementById('chat-input').onkeydown = (e) => {
 // Mouse and touch controls
 const controls = document.getElementById('controls');
 const joystick = document.getElementById('joystick');
+const shootBtn = document.getElementById('shoot-btn');
 let touchState = { moving: false, shooting: false, moveX: 0, moveY: 0 };
 let mouseX = 0, mouseY = 0;
 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -201,6 +202,16 @@ if (isMobile) {
         touchState.moveY = 0;
         joystick.style.left = '25px';
         joystick.style.top = '25px';
+    });
+
+    // Shoot button for mobile
+    shootBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        touchState.shooting = true;
+    });
+    shootBtn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        touchState.shooting = false;
     });
 } else {
     canvas.addEventListener('mousemove', (e) => {
@@ -256,6 +267,28 @@ function checkCollision(x1, y1, x2, y2) {
     const dy = y1 - y2;
     const distance = Math.sqrt(dx * dx + dy * dy);
     return distance < PLAYER_SIZE;
+}
+
+function resolveCollision(p1, p2) {
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    if (distance < PLAYER_SIZE) {
+        const angle = Math.atan2(dy, dx);
+        const overlap = PLAYER_SIZE - distance;
+        const pushX = Math.cos(angle) * overlap / 2;
+        const pushY = Math.sin(angle) * overlap / 2;
+        p1.x -= pushX;
+        p1.y -= pushY;
+        p2.x += pushX;
+        p2.y += pushY;
+
+        // Ensure players stay within bounds after push
+        p1.x = Math.max(0, Math.min(canvas.width - PLAYER_SIZE, p1.x));
+        p1.y = Math.max(0, Math.min(canvas.height - PLAYER_SIZE, p1.y));
+        p2.x = Math.max(0, Math.min(canvas.width - PLAYER_SIZE, p2.x));
+        p2.y = Math.max(0, Math.min(canvas.height - PLAYER_SIZE, p2.y));
+    }
 }
 
 function startGame() {
@@ -329,17 +362,14 @@ function gameLoop() {
         newX = Math.max(0, Math.min(canvas.width - PLAYER_SIZE, newX));
         newY = Math.max(0, Math.min(canvas.height - PLAYER_SIZE, newY));
 
-        // Check collision with other players
-        let canMove = true;
+        me.x = newX;
+        me.y = newY;
+
+        // Resolve collision with other players
         for (let id in players) {
-            if (id !== playerId && checkCollision(newX, newY, players[id].x, players[id].y)) {
-                canMove = false;
-                break;
+            if (id !== playerId && players[id].lives > 0) {
+                resolveCollision(me, players[id]);
             }
-        }
-        if (canMove) {
-            me.x = newX;
-            me.y = newY;
         }
 
         // Aiming with mouse
@@ -349,7 +379,7 @@ function gameLoop() {
             me.angle = Math.atan2(dy, dx);
         }
 
-        // Shooting with MB1
+        // Shooting with MB1 or Shoot button
         if (touchState.shooting && me.shootCooldown <= 0) {
             const angle = me.angle || 0; // Use mouse angle on desktop, default to right on mobile
             const bullet = { 
@@ -365,7 +395,7 @@ function gameLoop() {
             me.shootCooldown = 20;
             playSound(400, 100);
         }
-        if (me) me.shootCooldown--;
+        if (me.shootCooldown > 0) me.shootCooldown--;
         if (conn && conn.open) sendData({ type: 'move', id: playerId, x: me.x, y: me.y, angle: me.angle });
     }
 
