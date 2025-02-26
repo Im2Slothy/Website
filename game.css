@@ -39,7 +39,7 @@ canvas {
     width: 100px; 
     height: 100px; 
     opacity: 0.5; 
-    display: none; /* Hidden by default */
+    display: none;
 }
 #joystick { 
     width: 50px; 
@@ -51,9 +51,24 @@ canvas {
     left: 25px; 
     pointer-events: none;
 }
-button, input { 
-    font-size: 14px; 
-    margin: 5px; 
+#aim-controls { 
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    width: 100px;
+    height: 100px;
+    opacity: 0.5;
+    display: none;
+}
+#aim-joystick { 
+    width: 50px; 
+    height: 50px; 
+    background: rgba(255, 0, 0, 0.7); 
+    border-radius: 50%; 
+    position: absolute; 
+    top: 25px; 
+    left: 25px; 
+    pointer-events: none;
 }
 #shoot-btn {
     position: fixed;
@@ -67,15 +82,24 @@ button, input {
     font-size: 16px;
     font-weight: bold;
     border: 2px solid white;
-    display: none; /* Hidden by default */
-    touch-action: none; /* Prevents default touch actions */
+    display: none;
+    touch-action: none;
 }
-/* Show controls on mobile and tablets */
+#share-x-btn {
+    margin-top: 10px;
+    padding: 5px 15px;
+    background-color: #1DA1F2; /* X's brand color */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+button, input { 
+    font-size: 14px; 
+    margin: 5px; 
+}
 @media (max-width: 1024px) {
-    #controls {
-        display: block;
-    }
-    #shoot-btn {
+    #controls, #aim-controls, #shoot-btn {
         display: block;
     }
 }
