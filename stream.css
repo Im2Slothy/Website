@@ -1,40 +1,119 @@
-body {
+/* Reset and Base Styles */
+* {
     margin: 0;
     padding: 0;
-    font-family: Arial, sans-serif;
-    background-color: #0f0f0f;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    background: linear-gradient(135deg, #1a1a1a, #2e2e2e); /* Subtle gradient background */
+    color: #e0e0e0;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
+    justify-content: space-between;
 }
+
+/* Header */
+header h1 {
+    font-size: 2.5rem;
+    color: #b7e778; /* Slothy green */
+    padding: 20px 0;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Main Content */
 .container {
-    max-width: 600px; /* Set a maximum width for the content */
-    overflow: auto; /* Enable scrolling if content exceeds the container height */
-    margin: 0 auto; /* Center the container horizontally */
+    max-width: 800px; /* Wider container for better readability */
+    margin: 0 auto;
+    padding: 20px;
 }
-h1 {
-    font-size: 36px;
-    color: #fff;
-    margin-bottom: 20px;
-}
+
 .welcome-box {
     background-color: #292929;
-    border-radius: 10px;
-    padding: 20px;
-    text-align: center;
-    color: #fff;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+    transition: transform 0.3s ease;
 }
-.commands {
-    font-size: 18px;
+
+.welcome-box:hover {
+    transform: translateY(-5px); /* Subtle hover lift */
 }
-ul {
+
+.welcome-box h2 {
+    color: #b7e778;
+    font-size: 1.8rem;
+    margin-bottom: 20px;
+}
+
+.command-list {
     list-style: none;
-    padding: 0;
+    text-align: left;
 }
-li {
-    font-size: 16px;
-    margin: 5px;
+
+.command-list li {
+    font-size: 1.1rem;
+    margin: 12px 0;
+    padding: 10px;
+    background: #333333;
+    border-radius: 8px;
+    transition: background 0.3s ease;
+}
+
+.command-list li:hover {
+    background: #444444; /* Hover effect for commands */
+}
+
+.command {
+    color: #f4c430; /* Highlight commands in gold */
+    font-weight: bold;
+}
+
+/* Footer */
+footer {
+    background-color: #1a1a1a;
+    padding: 20px 0;
+    margin-top: 40px;
+}
+
+footer h2 {
+    color: #b7e778;
+    font-size: 1.6rem;
+    margin-bottom: 20px;
+}
+
+.social a {
+    color: #e0e0e0;
+    margin: 0 15px;
+    transition: color 0.3s ease, transform 0.3s ease;
+}
+
+.social a:hover {
+    color: #b7e778; /* Green on hover */
+    transform: scale(1.2); /* Slight zoom on hover */
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+    .container {
+        padding: 10px;
+    }
+
+    .welcome-box {
+        padding: 20px;
+    }
+
+    header h1 {
+        font-size: 2rem;
+    }
+
+    .command-list li {
+        font-size: 1rem;
+    }
+
+    .social a {
+        margin: 0 10px;
+    }
 }
