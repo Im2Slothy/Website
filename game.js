@@ -20,6 +20,8 @@ window.onload = () => {
     bgMusic.volume = 0.2;
     let lastUpdateTime = 0;
     const UPDATE_INTERVAL = 1 / 30;
+    const timestamp = new Date().toLocaleString();
+
 
     const obstacles = [
         { x: 0.25, y: 0.25, width: 0.125, height: 0.033 },
@@ -82,7 +84,7 @@ window.onload = () => {
         const tweetText = `I just ${players[playerId].lives > 0 ? 'won' : 'lost'} a game of 1v1 Shooter: Slothy & Grok Edition! Play here: https://im2slothy.com/game.html #1v1Shooter #GameDev`;
         const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
         window.open(url, '_blank');
-        logToDiscord(`Player ${playerId || 'Unknown'} shared end-game result on X`);
+        logToDiscord(`[${timestamp}] | Player ${playerId || 'Unknown'} shared end-game result on X`);
     };
 
     document.getElementById('end-refresh-btn').onclick = () => {
@@ -154,7 +156,7 @@ window.onload = () => {
                 document.getElementById('peer-id').disabled = true;
                 document.getElementById('status').textContent = 'Status: Hosting...';
                 bgMusic.play();
-                logToDiscord(`Player ${playerId} created a game (ID: ${id})`);
+                logToDiscord(`[${timestamp}] | Player ${playerId} created a game (ID: ${id})`);
             });
             peer.on('connection', (connection) => {
                 console.log('Opponent connected to host:', connection.peer);
@@ -201,7 +203,7 @@ window.onload = () => {
                     document.getElementById('status').textContent = 'Status: Connected! Playing...';
                     if (!gameRunning) startGame();
                     bgMusic.play();
-                    logToDiscord(`Player ${playerId} joined game (Host ID: ${hostId})`);
+                    logToDiscord(`[${timestamp}] | Player ${playerId} joined game (Host ID: ${hostId})`);
                 });
                 conn.on('data', handleData);
                 conn.on('close', () => {
@@ -230,7 +232,7 @@ window.onload = () => {
             document.getElementById('status').textContent = 'Status: Playing against AI';
             if (!gameRunning) startGame();
             bgMusic.play();
-            logToDiscord(`Player ${playerId} started a game against AI`);
+            logToDiscord(`[${timestamp}] | Player ${playerId} started a game against AI`);
         }
     };
 
@@ -238,7 +240,7 @@ window.onload = () => {
         const tweetText = "Check out this awesome 1v1 Shooter game I’m playing! Join me at https://im2slothy.com/game.html #1v1Shooter #GameDev";
         const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
         window.open(url, '_blank');
-        logToDiscord(`Player ${playerId || 'Unknown'} shared the game on X`);
+        logToDiscord(`[${timestamp}] | Player ${playerId || 'Unknown'} shared the game on X`);
     };
 
     const isMobile = /Mobi|Android/i.test(navigator.userAgent);
@@ -303,7 +305,8 @@ window.onload = () => {
             const msg = `${playerId?.slice(0, 5) || 'You'}: ${e.target.value}`;
             document.getElementById('chat-box').innerHTML += `<p>${msg}</p>`;
             if (conn && conn.open) sendData({ type: 'chat', msg });
-            logToDiscord(`Chat: ${msg}`);
+            const timestamp = new Date().toLocaleString();
+            logToDiscord(`[${timestamp}] Chat: ${msg}`);
             e.target.value = '';
         }
     };
