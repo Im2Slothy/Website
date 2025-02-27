@@ -11,17 +11,17 @@ window.onload = () => {
     let mouseX = 0;
     let mouseY = 0;
     let mouseDown = false;
-    const BASE_WIDTH = 800;
-    const BASE_HEIGHT = 600;
-    let scaleFactor = 1;
+    const BASE_WIDTH = 800; 
+    const BASE_HEIGHT = 600; 
+    let scaleFactor = 1;  
     const HOMING_DURATION = 5;
     const bgMusic = new Audio('audio/dk.mp3');
     bgMusic.loop = true;
     bgMusic.volume = 0.2;
+    let musicPlaying = false;
     let lastUpdateTime = 0;
     const UPDATE_INTERVAL = 1 / 30;
     const timestamp = new Date().toLocaleString();
-
 
     const obstacles = [
         { x: 0.25, y: 0.25, width: 0.125, height: 0.033 },
@@ -105,7 +105,7 @@ window.onload = () => {
 
         canvas.width = newWidth;
         canvas.height = newHeight;
-        scaleFactor = newWidth / BASE_WIDTH;
+        scaleFactor = Math.min(newWidth / BASE_WIDTH, newHeight / BASE_HEIGHT); // Uniform scaling
     }
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
@@ -129,8 +129,8 @@ window.onload = () => {
 
     canvas.addEventListener('mousemove', (e) => {
         const rect = canvas.getBoundingClientRect();
-        mouseX = e.clientX - rect.left;
-        mouseY = e.clientY - rect.top;
+        mouseX = (e.clientX - rect.left) / scaleFactor; // Adjust for scale
+        mouseY = (e.clientY - rect.top) / scaleFactor;
     });
 
     canvas.addEventListener('mousedown', (e) => {
@@ -151,11 +151,10 @@ window.onload = () => {
             peer.on('open', (id) => {
                 console.log('Host ID generated:', id);
                 playerId = id;
-                players[playerId] = { x: 100 * scaleFactor, y: 300 * scaleFactor, color: 'red', health: 100, speed: PLAYER_SPEED, shootCooldown: 0, lives: 3, angle: 0, shield: 0, homing: 0 };
+                players[playerId] = { x: 100, y: 300, color: 'red', health: 100, speed: PLAYER_SPEED, shootCooldown: 0, lives: 3, angle: 0, shield: 0, homing: 0 }; // No scaleFactor here
                 document.getElementById('peer-id').value = id;
                 document.getElementById('peer-id').disabled = true;
                 document.getElementById('status').textContent = 'Status: Hosting...';
-                bgMusic.play();
                 logToDiscord(`[${timestamp}] | Player ${playerId} created a game (ID: ${id})`);
             });
             peer.on('connection', (connection) => {
@@ -163,7 +162,7 @@ window.onload = () => {
                 conn = connection;
                 conn.on('open', () => {
                     console.log('Connection opened on host');
-                    players[conn.peer] = { x: 700 * scaleFactor, y: 300 * scaleFactor, color: 'cyan', health: 100, speed: PLAYER_SPEED, shootCooldown: 0, lives: 3, angle: 0, shield: 0, homing: 0 };
+                    players[conn.peer] = { x: 700, y: 300, color: 'cyan', health: 100, speed: PLAYER_SPEED, shootCooldown: 0, lives: 3, angle: 0, shield: 0, homing: 0 };
                     document.getElementById('status').textContent = 'Status: Opponent joined! Playing...';
                     conn.send({ type: 'init', players });
                     if (!gameRunning) startGame();
@@ -175,6 +174,7 @@ window.onload = () => {
                         showEndGame(playerId); // Host wins if opponent disconnects
                         gameRunning = false;
                         bgMusic.pause();
+                        musicPlaying = false;
                     }
                 });
                 conn.on('error', (err) => console.error('Host connection error:', err));
@@ -194,7 +194,7 @@ window.onload = () => {
             peer.on('open', (id) => {
                 console.log('Joiner ID generated:', id);
                 playerId = id;
-                players[playerId] = { x: 700 * scaleFactor, y: 300 * scaleFactor, color: 'cyan', health: 100, speed: PLAYER_SPEED, shootCooldown: 0, lives: 3, angle: 0, shield: 0, homing: 0 };
+                players[playerId] = { x: 700, y: 300, color: 'cyan', health: 100, speed: PLAYER_SPEED, shootCooldown: 0, lives: 3, angle: 0, shield: 0, homing: 0 };
                 document.getElementById('peer-id').disabled = true;
                 document.getElementById('status').textContent = 'Status: Connecting...';
                 conn = peer.connect(hostId);
@@ -202,7 +202,6 @@ window.onload = () => {
                     console.log('Connected to host:', hostId);
                     document.getElementById('status').textContent = 'Status: Connected! Playing...';
                     if (!gameRunning) startGame();
-                    bgMusic.play();
                     logToDiscord(`[${timestamp}] | Player ${playerId} joined game (Host ID: ${hostId})`);
                 });
                 conn.on('data', handleData);
@@ -212,6 +211,7 @@ window.onload = () => {
                         showEndGame(playerId); // Joiner wins if host disconnects
                         gameRunning = false;
                         bgMusic.pause();
+                        musicPlaying = false;
                     }
                 });
                 conn.on('error', (err) => console.error('Joiner connection error:', err));
@@ -223,15 +223,14 @@ window.onload = () => {
     document.getElementById('ai-btn').onclick = () => {
         if (!playerId) {
             playerId = 'human';
-            players[playerId] = { x: 100 * scaleFactor, y: 300 * scaleFactor, color: 'red', health: 100, speed: PLAYER_SPEED, shootCooldown: 0, lives: 3, angle: 0, shield: 0, homing: 0 };
+            players[playerId] = { x: 100, y: 300, color: 'red', health: 100, speed: PLAYER_SPEED, shootCooldown: 0, lives: 3, angle: 0, shield: 0, homing: 0 };
         }
         if (!conn && !aiActive) {
             const aiId = 'ai';
-            players[aiId] = { x: 700 * scaleFactor, y: 300 * scaleFactor, color: 'cyan', health: 100, speed: AI_SPEED, shootCooldown: 0, lives: 3, angle: 0, shield: 0, homing: 0 };
+            players[aiId] = { x: 700, y: 300, color: 'cyan', health: 100, speed: AI_SPEED, shootCooldown: 0, lives: 3, angle: 0, shield: 0, homing: 0 };
             aiActive = true;
             document.getElementById('status').textContent = 'Status: Playing against AI';
             if (!gameRunning) startGame();
-            bgMusic.play();
             logToDiscord(`[${timestamp}] | Player ${playerId} started a game against AI`);
         }
     };
@@ -355,11 +354,11 @@ window.onload = () => {
             const types = ['speed', 'rapid', 'shield', 'multi', 'health', 'homing'];
             let x, y, valid = false;
             do {
-                x = Math.random() * (canvas.width - 20);
-                y = Math.random() * (canvas.height - 20);
+                x = Math.random() * (BASE_WIDTH - 20);  // Use BASE_WIDTH
+                y = Math.random() * (BASE_HEIGHT - 20); // Use BASE_HEIGHT
                 valid = !obstacles.some(o => 
-                    x + 10 > o.x * canvas.width && x - 10 < (o.x + o.width) * canvas.width &&
-                    y + 10 > o.y * canvas.height && y - 10 < (o.y + o.height) * canvas.height
+                    x + 10 > o.x * BASE_WIDTH && x - 10 < (o.x + o.width) * BASE_WIDTH &&
+                    y + 10 > o.y * BASE_HEIGHT && y - 10 < (o.y + o.height) * BASE_HEIGHT
                 );
             } while (!valid);
             powerUps.push({ x, y, type: types[Math.floor(Math.random() * types.length)] });
@@ -388,9 +387,9 @@ window.onload = () => {
             const circleX = x1 + PLAYER_SIZE / 2;
             const circleY = y1 + PLAYER_SIZE / 2;
             const rectLeft = x2;
-            const rectRight = x2 + w2 * canvas.width;
+            const rectRight = x2 + w2 * BASE_WIDTH; // Use BASE_WIDTH
             const rectTop = y2;
-            const rectBottom = y2 + h2 * canvas.height;
+            const rectBottom = y2 + h2 * BASE_HEIGHT; // Use BASE_HEIGHT
 
             const closestX = Math.max(rectLeft, Math.min(circleX, rectRight));
             const closestY = Math.max(rectTop, Math.min(circleY, rectBottom));
@@ -415,20 +414,20 @@ window.onload = () => {
             p2.x += pushX;
             p2.y += pushY;
 
-            p1.x = Math.max(0, Math.min(canvas.width - PLAYER_SIZE, p1.x));
-            p1.y = Math.max(0, Math.min(canvas.height - PLAYER_SIZE, p1.y));
-            p2.x = Math.max(0, Math.min(canvas.width - PLAYER_SIZE, p2.x));
-            p2.y = Math.max(0, Math.min(canvas.height - PLAYER_SIZE, p2.y));
+            p1.x = Math.max(0, Math.min(BASE_WIDTH - PLAYER_SIZE, p1.x)); // Use BASE_WIDTH
+            p1.y = Math.max(0, Math.min(BASE_HEIGHT - PLAYER_SIZE, p1.y)); // Use BASE_HEIGHT
+            p2.x = Math.max(0, Math.min(BASE_WIDTH - PLAYER_SIZE, p2.x));
+            p2.y = Math.max(0, Math.min(BASE_HEIGHT - PLAYER_SIZE, p2.y));
         }
     }
 
     function resolveObstacleCollision(entity, obstacle) {
         const circleX = entity.x + PLAYER_SIZE / 2;
         const circleY = entity.y + PLAYER_SIZE / 2;
-        const rectLeft = obstacle.x * canvas.width;
-        const rectRight = (obstacle.x + obstacle.width) * canvas.width;
-        const rectTop = obstacle.y * canvas.height;
-        const rectBottom = (obstacle.y + obstacle.height) * canvas.height;
+        const rectLeft = obstacle.x * BASE_WIDTH; // Use BASE_WIDTH
+        const rectRight = (obstacle.x + obstacle.width) * BASE_WIDTH;
+        const rectTop = obstacle.y * BASE_HEIGHT; // Use BASE_HEIGHT
+        const rectBottom = (obstacle.y + obstacle.height) * BASE_HEIGHT;
 
         const closestX = Math.max(rectLeft, Math.min(circleX, rectRight));
         const closestY = Math.max(rectTop, Math.min(circleY, rectBottom));
@@ -444,14 +443,18 @@ window.onload = () => {
             entity.x += pushX;
             entity.y += pushY;
 
-            entity.x = Math.max(0, Math.min(canvas.width - PLAYER_SIZE, entity.x));
-            entity.y = Math.max(0, Math.min(canvas.height - PLAYER_SIZE, entity.y));
+            entity.x = Math.max(0, Math.min(BASE_WIDTH - PLAYER_SIZE, entity.x));
+            entity.y = Math.max(0, Math.min(BASE_HEIGHT - PLAYER_SIZE, entity.y));
         }
     }
 
     function startGame() {
         console.log('Starting game');
         gameRunning = true;
+        if (!musicPlaying) {
+            bgMusic.play();
+            musicPlaying = true;
+        }
         requestAnimationFrame(gameLoop);
     }
 
@@ -459,47 +462,51 @@ window.onload = () => {
         const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.1);
         lastTime = currentTime;
 
+        // Clear and scale canvas
+        ctx.save();
+        ctx.scale(scaleFactor, scaleFactor);
         ctx.fillStyle = '#222';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillRect(0, 0, BASE_WIDTH, BASE_HEIGHT);
 
         if (flashTimer > 0) {
             ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillRect(0, 0, BASE_WIDTH, BASE_HEIGHT);
             flashTimer -= deltaTime;
         }
 
         ctx.strokeStyle = '#333';
-        for (let i = 0; i < canvas.width; i += 50 * scaleFactor) {
+        for (let i = 0; i < BASE_WIDTH; i += 50) { // No scaleFactor here
             ctx.beginPath();
             ctx.moveTo(i, 0);
-            ctx.lineTo(i, canvas.height);
+            ctx.lineTo(i, BASE_HEIGHT);
             ctx.stroke();
         }
-        for (let i = 0; i < canvas.height; i += 50 * scaleFactor) {
+        for (let i = 0; i < BASE_HEIGHT; i += 50) {
             ctx.beginPath();
             ctx.moveTo(0, i);
-            ctx.lineTo(canvas.width, i);
+            ctx.lineTo(BASE_WIDTH, i);
             ctx.stroke();
         }
 
         ctx.fillStyle = 'gray';
         obstacles.forEach(o => {
-            ctx.fillRect(o.x * canvas.width, o.y * canvas.height, o.width * canvas.width, o.height * canvas.height);
+            ctx.fillRect(o.x * BASE_WIDTH, o.y * BASE_HEIGHT, o.width * BASE_WIDTH, o.height * BASE_HEIGHT);
         });
 
-        ctx.fillStyle = 'white';
-        ctx.font = `${16 * scaleFactor}px Arial`;
-        ctx.fillText(`You: ${players[playerId]?.lives || 0} lives`, 10 * scaleFactor, 20 * scaleFactor);
         const opponentId = Object.keys(players).find(id => id !== playerId);
-        ctx.fillText(`Opponent: ${players[opponentId]?.lives || 0} lives`, canvas.width - 150 * scaleFactor, 20 * scaleFactor);
+
+        ctx.fillStyle = 'white';
+        ctx.font = `${16}px Arial`; // Fixed font size, scaled by ctx.scale
+        ctx.fillText(`You: ${players[playerId]?.lives || 0} lives`, 10, 20);
+        ctx.fillText(`Opponent: ${players[opponentId]?.lives || 0} lives`, BASE_WIDTH - 150, 20);
 
         let me = players[playerId];
         if (me) {
             if (me.health <= 0 && me.lives > 0) {
                 me.lives--;
                 me.health = 100;
-                me.x = playerId === 'human' ? 100 * scaleFactor : 700 * scaleFactor;
-                me.y = 300 * scaleFactor;
+                me.x = playerId === 'human' ? 100 : 700;
+                me.y = 300;
                 me.speed = PLAYER_SPEED;
                 me.shootCooldown = 0;
                 me.shield = 0;
@@ -512,6 +519,8 @@ window.onload = () => {
                 showEndGame(opponentId);
                 gameRunning = false;
                 bgMusic.pause();
+                musicPlaying = false;
+                ctx.restore();
                 return;
             }
 
@@ -529,8 +538,8 @@ window.onload = () => {
 
             const newX = me.x + velX;
             const newY = me.y + velY;
-            me.x = Math.max(0, Math.min(canvas.width - PLAYER_SIZE, newX));
-            me.y = Math.max(0, Math.min(canvas.height - PLAYER_SIZE, newY));
+            me.x = Math.max(0, Math.min(BASE_WIDTH - PLAYER_SIZE, newX));
+            me.y = Math.max(0, Math.min(BASE_HEIGHT - PLAYER_SIZE, newY));
 
             obstacles.forEach(o => resolveObstacleCollision(me, o));
 
@@ -598,14 +607,23 @@ window.onload = () => {
             }
         }
 
+        if (opponentId && players[opponentId] && players[opponentId].lives <= 0 && !aiActive) {
+            showEndGame(playerId);
+            gameRunning = false;
+            bgMusic.pause();
+            musicPlaying = false;
+            ctx.restore();
+            return;
+        }
+
         if (aiActive) {
             const ai = players['ai'];
             const human = players[playerId];
             if (ai.health <= 0 && ai.lives > 0) {
                 ai.lives--;
                 ai.health = 100;
-                ai.x = 700 * scaleFactor;
-                ai.y = 300 * scaleFactor;
+                ai.x = 700;
+                ai.y = 300;
                 ai.speed = AI_SPEED;
                 ai.shootCooldown = 0;
                 ai.shield = 0;
@@ -615,6 +633,8 @@ window.onload = () => {
                 showEndGame(playerId);
                 gameRunning = false;
                 bgMusic.pause();
+                musicPlaying = false;
+                ctx.restore();
                 return;
             }
             let velX = 0;
@@ -632,8 +652,8 @@ window.onload = () => {
 
             const newX = ai.x + velX;
             const newY = ai.y + velY;
-            ai.x = Math.max(0, Math.min(canvas.width - PLAYER_SIZE, newX));
-            ai.y = Math.max(0, Math.min(canvas.height - PLAYER_SIZE, newY));
+            ai.x = Math.max(0, Math.min(BASE_WIDTH - PLAYER_SIZE, newX));
+            ai.y = Math.max(0, Math.min(BASE_HEIGHT - PLAYER_SIZE, newY));
 
             obstacles.forEach(o => resolveObstacleCollision(ai, o));
 
@@ -663,7 +683,7 @@ window.onload = () => {
         powerUps = powerUps.filter(p => {
             for (let id in players) {
                 let pl = players[id];
-                if (Math.abs(pl.x - p.x) < PLAYER_SIZE && Math.abs(pl.y - p.y) < PLAYER_SIZE) {
+                if (Math.abs(pl.x - p.x) < PLAYER_SIZE && Math.abs(p.y - me.y) < PLAYER_SIZE) {
                     if (p.type === 'speed') pl.speed = PLAYER_SPEED * 1.5;
                     else if (p.type === 'rapid') pl.shootCooldown = -0.2;
                     else if (p.type === 'shield') pl.shield = 5;
@@ -708,10 +728,10 @@ window.onload = () => {
             b.y += b.dy * deltaTime;
         });
         bullets = bullets.filter(b => {
-            if (b.x > canvas.width || b.x < 0 || b.y > canvas.height || b.y < 0) return false;
+            if (b.x > BASE_WIDTH || b.x < 0 || b.y > BASE_HEIGHT || b.y < 0) return false;
             for (let o of obstacles) {
-                if (b.x >= o.x * canvas.width && b.x <= (o.x + o.width) * canvas.width && 
-                    b.y >= o.y * canvas.height && b.y <= (o.y + o.height) * canvas.height) {
+                if (b.x >= o.x * BASE_WIDTH && b.x <= (o.x + o.width) * BASE_WIDTH && 
+                    b.y >= o.y * BASE_HEIGHT && b.y <= (o.y + o.height) * BASE_HEIGHT) {
                     return false;
                 }
             }
@@ -760,16 +780,16 @@ window.onload = () => {
 
             if (p.shield > 0) {
                 ctx.strokeStyle = 'blue';
-                ctx.lineWidth = 2;
+                ctx.lineWidth = 2 / scaleFactor; // Adjust line width for scale
                 ctx.beginPath();
-                ctx.arc(p.x + PLAYER_SIZE / 2, p.y + PLAYER_SIZE / 2, PLAYER_SIZE / 2 + 2, 0, Math.PI * 2);
+                ctx.arc(p.x + PLAYER_SIZE / 2, p.y + PLAYER_SIZE / 2, PLAYER_SIZE / 2 + 2 / scaleFactor, 0, Math.PI * 2);
                 ctx.stroke();
             }
 
             ctx.fillStyle = 'white';
-            ctx.font = `${12 * scaleFactor}px Arial`;
+            ctx.font = `${12}px Arial`; // Fixed size, scaled by ctx.scale
             ctx.textAlign = 'center';
-            ctx.fillText(id.slice(0, 5), p.x + PLAYER_SIZE / 2, p.y - 15 * scaleFactor);
+            ctx.fillText(id.slice(0, 5), p.x + PLAYER_SIZE / 2, p.y - 15);
 
             ctx.fillStyle = 'white';
             ctx.beginPath();
@@ -780,9 +800,9 @@ window.onload = () => {
             ctx.fill();
 
             ctx.fillStyle = 'lime';
-            ctx.fillRect(p.x, p.y - 10 * scaleFactor, Math.max(0, Math.min(p.health / 100 * PLAYER_SIZE, PLAYER_SIZE)), 5 * scaleFactor);
+            ctx.fillRect(p.x, p.y - 10, Math.max(0, Math.min(p.health / 100 * PLAYER_SIZE, PLAYER_SIZE)), 5);
             ctx.strokeStyle = 'white';
-            ctx.strokeRect(p.x, p.y - 10 * scaleFactor, PLAYER_SIZE, 5 * scaleFactor);
+            ctx.strokeRect(p.x, p.y - 10, PLAYER_SIZE, 5);
         }
 
         ctx.fillStyle = 'white';
@@ -798,6 +818,8 @@ window.onload = () => {
             ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
             ctx.fill();
         });
+
+        ctx.restore(); // Reset scale for next frame
 
         if (gameRunning) requestAnimationFrame(gameLoop);
     }
