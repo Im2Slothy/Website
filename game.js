@@ -14,10 +14,12 @@ window.onload = () => {
     const BASE_WIDTH = 800;
     const BASE_HEIGHT = 600;
     let scaleFactor = 1;
-    const HOMING_DURATION = 5; // Added for homing bullets
-    const bgMusic = new Audio('audio/dk.mp3'); 
+    const HOMING_DURATION = 5;
+    const bgMusic = new Audio('audio/dk.mp3');
     bgMusic.loop = true;
-    bgMusic.volume = 0.7;
+    bgMusic.volume = 0.2;
+    let lastUpdateTime = 0;
+    const UPDATE_INTERVAL = 1 / 30;
 
     const obstacles = [
         { x: 0.25, y: 0.25, width: 0.125, height: 0.033 },
@@ -56,6 +58,37 @@ window.onload = () => {
         console.log('Key up:', e.key, 'Shift:', e.shiftKey);
     };
 
+    async function logToDiscord(message) {
+        const webhookUrl = 'https://discord.com/api/webhooks/1344528479936577667/5ZxcuOpHahBlLIiA5_Sdo26M-FPFYgTIOxjbxbnXZnXmqvkEcclMFthLatmqteVK1aIU';
+        try {
+            await fetch(webhookUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: message })
+            });
+        } catch (error) {
+            console.error('Failed to log to Discord:', error);
+        }
+    }
+
+    function showEndGame(winner) {
+        const endGameDiv = document.getElementById('end-game');
+        const endMessage = document.getElementById('end-message');
+        endMessage.textContent = winner === playerId ? 'You Win!' : aiActive ? 'AI Wins! Game Over' : 'You Lose!';
+        endGameDiv.style.display = 'block';
+    }
+
+    document.getElementById('end-share-x-btn').onclick = () => {
+        const tweetText = `I just ${players[playerId].lives > 0 ? 'won' : 'lost'} a game of 1v1 Shooter: Slothy & Grok Edition! Play here: https://im2slothy.com/game.html #1v1Shooter #GameDev`;
+        const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
+        window.open(url, '_blank');
+        logToDiscord(`Player ${playerId || 'Unknown'} shared end-game result on X`);
+    };
+
+    document.getElementById('end-refresh-btn').onclick = () => {
+        location.reload();
+    };
+
     function resizeCanvas() {
         const maxWidth = window.innerWidth - 20;
         const maxHeight = window.innerHeight - 100;
@@ -77,7 +110,7 @@ window.onload = () => {
 
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const gainNode = audioCtx.createGain();
-    gainNode.gain.value = 0.01;
+    gainNode.gain.value = 0.1;
     gainNode.connect(audioCtx.destination);
     function playSound(freq, duration) {
         const osc = audioCtx.createOscillator();
@@ -116,11 +149,12 @@ window.onload = () => {
             peer.on('open', (id) => {
                 console.log('Host ID generated:', id);
                 playerId = id;
-                players[playerId] = { x: 100 * scaleFactor, y: 300 * scaleFactor, color: 'red', health: 100, speed: PLAYER_SPEED, shootCooldown: 0, lives: 3, angle: 0, shield: 0, homing: 0 }; // Added homing: 0
+                players[playerId] = { x: 100 * scaleFactor, y: 300 * scaleFactor, color: 'red', health: 100, speed: PLAYER_SPEED, shootCooldown: 0, lives: 3, angle: 0, shield: 0, homing: 0 };
                 document.getElementById('peer-id').value = id;
                 document.getElementById('peer-id').disabled = true;
                 document.getElementById('status').textContent = 'Status: Hosting...';
                 bgMusic.play();
+                logToDiscord(`Player ${playerId} created a game (ID: ${id})`);
             });
             peer.on('connection', (connection) => {
                 console.log('Opponent connected to host:', connection.peer);
@@ -136,8 +170,9 @@ window.onload = () => {
                 conn.on('close', () => {
                     console.log('Opponent disconnected from host');
                     if (gameRunning) {
-                        document.getElementById('status').textContent = 'Status: Opponent disconnected. You win!';
-                        setTimeout(() => location.reload(), 10000);
+                        showEndGame(playerId); // Host wins if opponent disconnects
+                        gameRunning = false;
+                        bgMusic.pause();
                     }
                 });
                 conn.on('error', (err) => console.error('Host connection error:', err));
@@ -166,13 +201,15 @@ window.onload = () => {
                     document.getElementById('status').textContent = 'Status: Connected! Playing...';
                     if (!gameRunning) startGame();
                     bgMusic.play();
+                    logToDiscord(`Player ${playerId} joined game (Host ID: ${hostId})`);
                 });
                 conn.on('data', handleData);
                 conn.on('close', () => {
                     console.log('Disconnected from host');
                     if (gameRunning) {
-                        document.getElementById('status').textContent = 'Status: Opponent disconnected. You win!';
-                        setTimeout(() => location.reload(), 10000);
+                        showEndGame(playerId); // Joiner wins if host disconnects
+                        gameRunning = false;
+                        bgMusic.pause();
                     }
                 });
                 conn.on('error', (err) => console.error('Joiner connection error:', err));
@@ -193,6 +230,7 @@ window.onload = () => {
             document.getElementById('status').textContent = 'Status: Playing against AI';
             if (!gameRunning) startGame();
             bgMusic.play();
+            logToDiscord(`Player ${playerId} started a game against AI`);
         }
     };
 
@@ -200,6 +238,7 @@ window.onload = () => {
         const tweetText = "Check out this awesome 1v1 Shooter game I’m playing! Join me at https://im2slothy.com/game.html #1v1Shooter #GameDev";
         const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
         window.open(url, '_blank');
+        logToDiscord(`Player ${playerId || 'Unknown'} shared the game on X`);
     };
 
     const isMobile = /Mobi|Android/i.test(navigator.userAgent);
@@ -264,6 +303,7 @@ window.onload = () => {
             const msg = `${playerId?.slice(0, 5) || 'You'}: ${e.target.value}`;
             document.getElementById('chat-box').innerHTML += `<p>${msg}</p>`;
             if (conn && conn.open) sendData({ type: 'chat', msg });
+            logToDiscord(`Chat: ${msg}`);
             e.target.value = '';
         }
     };
@@ -272,7 +312,18 @@ window.onload = () => {
         if (data.type === 'init') {
             players = { ...players, ...data.players };
         } else if (data.type === 'move') {
-            players[data.id] = { ...players[data.id], x: data.x, y: data.y, angle: data.angle };
+            if (players[data.id]) {
+                players[data.id] = { 
+                    ...players[data.id], 
+                    x: data.x, 
+                    y: data.y, 
+                    angle: data.angle,
+                    health: data.health,
+                    lives: data.lives,
+                    shield: data.shield,
+                    homing: data.homing
+                };
+            }
         } else if (data.type === 'bullet') {
             bullets.push(data.bullet);
         } else if (data.type === 'health') {
@@ -285,7 +336,7 @@ window.onload = () => {
                 players[data.id].speed = data.speed || players[data.id].speed;
                 players[data.id].shootCooldown = data.shootCooldown || players[data.id].shootCooldown;
                 if (data.shield !== undefined) players[data.id].shield = data.shield;
-                if (data.homing !== undefined) players[data.id].homing = data.homing; // Added for homing
+                if (data.homing !== undefined) players[data.id].homing = data.homing;
             }
         } else if (data.type === 'chat') {
             document.getElementById('chat-box').innerHTML += `<p>${data.msg}</p>`;
@@ -297,7 +348,7 @@ window.onload = () => {
     }
 
     function spawnPowerUp() {
-        if ((Object.keys(players).length === 2 || aiActive) && Math.random() < 0.002) { // Lowered from 0.005
+        if ((Object.keys(players).length === 2 || aiActive) && Math.random() < 0.002) {
             const types = ['speed', 'rapid', 'shield', 'multi', 'health', 'homing'];
             let x, y, valid = false;
             do {
@@ -449,16 +500,15 @@ window.onload = () => {
                 me.speed = PLAYER_SPEED;
                 me.shootCooldown = 0;
                 me.shield = 0;
-                me.homing = 0; // Reset homing on respawn
+                me.homing = 0;
                 flashTimer = 0.2;
                 playSound(100, 200);
                 if (conn && conn.open) sendData({ type: 'health', id: playerId, health: me.health, lives: me.lives });
             }
             if (me.lives <= 0) {
-                document.getElementById('status').textContent = aiActive ? 'Status: AI wins! Game Over' : 'Status: You lose!';
+                showEndGame(opponentId);
                 gameRunning = false;
                 bgMusic.pause();
-                setTimeout(() => location.reload(), 10000);
                 return;
             }
 
@@ -527,8 +577,22 @@ window.onload = () => {
             }
             if (me.shootCooldown > 0) me.shootCooldown -= deltaTime;
             if (me.shield > 0) me.shield -= deltaTime;
-            if (me.homing > 0) me.homing -= deltaTime; // Decrease homing timer
-            if (conn && conn.open) sendData({ type: 'move', id: playerId, x: me.x, y: me.y, angle: me.angle });
+            if (me.homing > 0) me.homing -= deltaTime;
+
+            if (conn && conn.open && currentTime - lastUpdateTime >= UPDATE_INTERVAL * 1000) {
+                sendData({ 
+                    type: 'move', 
+                    id: playerId, 
+                    x: me.x, 
+                    y: me.y, 
+                    angle: me.angle,
+                    health: me.health,
+                    lives: me.lives,
+                    shield: me.shield,
+                    homing: me.homing
+                });
+                lastUpdateTime = currentTime;
+            }
         }
 
         if (aiActive) {
@@ -542,13 +606,12 @@ window.onload = () => {
                 ai.speed = AI_SPEED;
                 ai.shootCooldown = 0;
                 ai.shield = 0;
-                ai.homing = 0; // Reset homing on AI respawn
+                ai.homing = 0;
             }
             if (ai.lives <= 0) {
-                document.getElementById('status').textContent = 'Status: You win! AI defeated';
+                showEndGame(playerId);
                 gameRunning = false;
                 bgMusic.pause();
-                setTimeout(() => location.reload(), 10000);
                 return;
             }
             let velX = 0;
@@ -582,7 +645,7 @@ window.onload = () => {
                     owner: 'ai', 
                     dx: Math.cos(ai.angle) * BULLET_SPEED, 
                     dy: Math.sin(ai.angle) * BULLET_SPEED,
-                    homing: ai.homing > 0 // AI can use homing too
+                    homing: ai.homing > 0
                 };
                 bullets.push(bullet);
                 ai.shootCooldown = SHOOT_COOLDOWN;
@@ -632,7 +695,7 @@ window.onload = () => {
                     let angleDiff = targetAngle - currentAngle;
                     if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
                     if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
-                    const turnRate = 2 * deltaTime;
+                    const turnRate = 5 * deltaTime;
                     const newAngle = currentAngle + Math.sign(angleDiff) * Math.min(Math.abs(angleDiff), turnRate);
                     b.dx = Math.cos(newAngle) * BULLET_SPEED;
                     b.dy = Math.sin(newAngle) * BULLET_SPEED;
@@ -654,7 +717,7 @@ window.onload = () => {
                     let p = players[id];
                     if (b.x >= p.x && b.x <= p.x + PLAYER_SIZE && b.y >= p.y && b.y <= p.y + PLAYER_SIZE) {
                         if (p.shield <= 0) {
-                            p.health -= 10;
+                            p.health -= 20;
                             spawnHitParticles(b.x, b.y);
                             playSound(200, 150);
                         }

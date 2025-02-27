@@ -101,6 +101,45 @@ button, input {
     font-size: 14px; 
     margin: 5px; 
 }
+
+#end-game {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(34, 34, 34, 0.9); /* Dark gray with transparency */
+    padding: 20px;
+    border: 2px solid #333;
+    border-radius: 10px;
+    text-align: center;
+    z-index: 10; /* Above canvas */
+}
+
+#end-game h2 {
+    color: white;
+    margin: 0 0 20px 0;
+    font-size: 24px;
+}
+
+#end-share-x-btn, #end-refresh-btn {
+    font-size: 16px;
+    padding: 10px 20px;
+    margin: 0 10px;
+    background-color: #1DA1F2; /* X's blue */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+#end-refresh-btn {
+    background-color: #555; /* Gray for refresh */
+}
+
+#end-share-x-btn:hover, #end-refresh-btn:hover {
+    opacity: 0.8;
+}
+
 @media (max-width: 1024px) {
     #controls, #aim-controls, #shoot-btn {
         display: block;
