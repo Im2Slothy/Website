@@ -8,16 +8,23 @@ window.onload = () => {
     let bullets = [];
     let powerUps = [];
     let particles = [];
-    const BASE_WIDTH = 800; // Base design width
-    const BASE_HEIGHT = 600; // Base design height
-    let scaleFactor = 1; // For scaling obstacles and positions
+    let mouseX = 0;
+    let mouseY = 0;
+    let mouseDown = false;
+    const BASE_WIDTH = 800;
+    const BASE_HEIGHT = 600;
+    let scaleFactor = 1;
+    const HOMING_DURATION = 5; // Added for homing bullets
+    const bgMusic = new Audio('audio/dk.mp3'); 
+    bgMusic.loop = true;
+    bgMusic.volume = 0.7;
 
     const obstacles = [
-        { x: 0.25, y: 0.25, width: 0.125, height: 0.033 }, // Top-middle horizontal (relative to canvas)
-        { x: 0.625, y: 0.25, width: 0.125, height: 0.033 }, // Top-right horizontal
-        { x: 0.4375, y: 0.5, width: 0.025, height: 0.25 },  // Center vertical
-        { x: 0.25, y: 0.75, width: 0.125, height: 0.033 }, // Bottom-left horizontal
-        { x: 0.625, y: 0.75, width: 0.125, height: 0.033 } // Bottom-right horizontal
+        { x: 0.25, y: 0.25, width: 0.125, height: 0.033 },
+        { x: 0.625, y: 0.25, width: 0.125, height: 0.033 },
+        { x: 0.4375, y: 0.5, width: 0.025, height: 0.25 },
+        { x: 0.25, y: 0.75, width: 0.125, height: 0.033 },
+        { x: 0.625, y: 0.75, width: 0.125, height: 0.033 }
     ];
     const PLAYER_SIZE = 20;
     const BULLET_SPEED = 600;
@@ -51,10 +58,9 @@ window.onload = () => {
 
     function resizeCanvas() {
         const maxWidth = window.innerWidth - 20;
-        const maxHeight = window.innerHeight - 100; // Reduced to fit mobile better
+        const maxHeight = window.innerHeight - 100;
         const aspectRatio = BASE_WIDTH / BASE_HEIGHT;
 
-        // Calculate scaled dimensions
         let newWidth = maxWidth;
         let newHeight = newWidth / aspectRatio;
         if (newHeight > maxHeight) {
@@ -64,14 +70,14 @@ window.onload = () => {
 
         canvas.width = newWidth;
         canvas.height = newHeight;
-        scaleFactor = newWidth / BASE_WIDTH; // Scale factor for obstacles and positions
+        scaleFactor = newWidth / BASE_WIDTH;
     }
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const gainNode = audioCtx.createGain();
-    gainNode.gain.value = 0.1;
+    gainNode.gain.value = 0.01;
     gainNode.connect(audioCtx.destination);
     function playSound(freq, duration) {
         const osc = audioCtx.createOscillator();
@@ -86,23 +92,42 @@ window.onload = () => {
         return Math.floor(1000 + Math.random() * 9000).toString();
     }
 
+    canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        mouseX = e.clientX - rect.left;
+        mouseY = e.clientY - rect.top;
+    });
+
+    canvas.addEventListener('mousedown', (e) => {
+        if (e.button === 0) {
+            mouseDown = true;
+        }
+    });
+
+    canvas.addEventListener('mouseup', (e) => {
+        if (e.button === 0) {
+            mouseDown = false;
+        }
+    });
+
     document.getElementById('host-btn').onclick = () => {
         if (!peer) {
             peer = new Peer(generateLobbyId());
             peer.on('open', (id) => {
                 console.log('Host ID generated:', id);
                 playerId = id;
-                players[playerId] = { x: 100 * scaleFactor, y: 300 * scaleFactor, color: 'red', health: 100, speed: PLAYER_SPEED, shootCooldown: 0, lives: 3, angle: 0, shield: 0 };
+                players[playerId] = { x: 100 * scaleFactor, y: 300 * scaleFactor, color: 'red', health: 100, speed: PLAYER_SPEED, shootCooldown: 0, lives: 3, angle: 0, shield: 0, homing: 0 }; // Added homing: 0
                 document.getElementById('peer-id').value = id;
                 document.getElementById('peer-id').disabled = true;
                 document.getElementById('status').textContent = 'Status: Hosting...';
+                bgMusic.play();
             });
             peer.on('connection', (connection) => {
                 console.log('Opponent connected to host:', connection.peer);
                 conn = connection;
                 conn.on('open', () => {
                     console.log('Connection opened on host');
-                    players[conn.peer] = { x: 700 * scaleFactor, y: 300 * scaleFactor, color: 'cyan', health: 100, speed: PLAYER_SPEED, shootCooldown: 0, lives: 3, angle: 0, shield: 0 };
+                    players[conn.peer] = { x: 700 * scaleFactor, y: 300 * scaleFactor, color: 'cyan', health: 100, speed: PLAYER_SPEED, shootCooldown: 0, lives: 3, angle: 0, shield: 0, homing: 0 };
                     document.getElementById('status').textContent = 'Status: Opponent joined! Playing...';
                     conn.send({ type: 'init', players });
                     if (!gameRunning) startGame();
@@ -132,7 +157,7 @@ window.onload = () => {
             peer.on('open', (id) => {
                 console.log('Joiner ID generated:', id);
                 playerId = id;
-                players[playerId] = { x: 700 * scaleFactor, y: 300 * scaleFactor, color: 'cyan', health: 100, speed: PLAYER_SPEED, shootCooldown: 0, lives: 3, angle: 0, shield: 0 };
+                players[playerId] = { x: 700 * scaleFactor, y: 300 * scaleFactor, color: 'cyan', health: 100, speed: PLAYER_SPEED, shootCooldown: 0, lives: 3, angle: 0, shield: 0, homing: 0 };
                 document.getElementById('peer-id').disabled = true;
                 document.getElementById('status').textContent = 'Status: Connecting...';
                 conn = peer.connect(hostId);
@@ -140,6 +165,7 @@ window.onload = () => {
                     console.log('Connected to host:', hostId);
                     document.getElementById('status').textContent = 'Status: Connected! Playing...';
                     if (!gameRunning) startGame();
+                    bgMusic.play();
                 });
                 conn.on('data', handleData);
                 conn.on('close', () => {
@@ -158,14 +184,15 @@ window.onload = () => {
     document.getElementById('ai-btn').onclick = () => {
         if (!playerId) {
             playerId = 'human';
-            players[playerId] = { x: 100 * scaleFactor, y: 300 * scaleFactor, color: 'red', health: 100, speed: PLAYER_SPEED, shootCooldown: 0, lives: 3, angle: 0, shield: 0 };
+            players[playerId] = { x: 100 * scaleFactor, y: 300 * scaleFactor, color: 'red', health: 100, speed: PLAYER_SPEED, shootCooldown: 0, lives: 3, angle: 0, shield: 0, homing: 0 };
         }
         if (!conn && !aiActive) {
             const aiId = 'ai';
-            players[aiId] = { x: 700 * scaleFactor, y: 300 * scaleFactor, color: 'cyan', health: 100, speed: AI_SPEED, shootCooldown: 0, lives: 3, angle: 0, shield: 0 };
+            players[aiId] = { x: 700 * scaleFactor, y: 300 * scaleFactor, color: 'cyan', health: 100, speed: AI_SPEED, shootCooldown: 0, lives: 3, angle: 0, shield: 0, homing: 0 };
             aiActive = true;
             document.getElementById('status').textContent = 'Status: Playing against AI';
             if (!gameRunning) startGame();
+            bgMusic.play();
         }
     };
 
@@ -175,24 +202,21 @@ window.onload = () => {
         window.open(url, '_blank');
     };
 
+    const isMobile = /Mobi|Android/i.test(navigator.userAgent);
     const controls = document.getElementById('controls');
-    const joystick = document.getElementById('joystick');
-    const aimControls = document.getElementById('aim-controls');
-    const aimJoystick = document.getElementById('aim-joystick');
+    const joystick = controls.querySelector('.joystick');
     const shootBtn = document.getElementById('shoot-btn');
-    let touchState = { moving: false, aiming: false, shooting: false, moveX: 0, moveY: 0, aimX: 0, aimY: 0 };
-    let mouseX = 0, mouseY = 0;
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const touchState = { moving: false, shooting: false, moveX: 0, moveY: 0 };
 
     if (isMobile) {
         controls.style.display = 'block';
-        aimControls.style.display = 'block';
-        shootBtn.style.display = 'none';
-
+        shootBtn.style.display = 'block';
+    
         controls.addEventListener('touchstart', (e) => {
             e.preventDefault();
             touchState.moving = true;
         });
+    
         controls.addEventListener('touchmove', (e) => {
             e.preventDefault();
             const touch = e.touches[0];
@@ -214,6 +238,7 @@ window.onload = () => {
                 joystick.style.top = (25 + touchState.moveY) + 'px';
             }
         });
+    
         controls.addEventListener('touchend', (e) => {
             e.preventDefault();
             touchState.moving = false;
@@ -222,53 +247,15 @@ window.onload = () => {
             joystick.style.left = '25px';
             joystick.style.top = '25px';
         });
-
-        aimControls.addEventListener('touchstart', (e) => {
+    
+        shootBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            touchState.aiming = true;
             touchState.shooting = true;
         });
-        aimControls.addEventListener('touchmove', (e) => {
+    
+        shootBtn.addEventListener('touchend', (e) => {
             e.preventDefault();
-            const touch = Array.from(e.touches).find(t => t.target === aimControls);
-            if (touch && touchState.aiming) {
-                const rect = aimControls.getBoundingClientRect();
-                const dx = touch.clientX - rect.left - 50;
-                const dy = touch.clientY - rect.top - 50;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                const maxDist = 25;
-                if (dist > maxDist) {
-                    const scale = maxDist / dist;
-                    touchState.aimX = dx * scale;
-                    touchState.aimY = dy * scale;
-                } else {
-                    touchState.aimX = dx;
-                    touchState.aimY = dy;
-                }
-                aimJoystick.style.left = (25 + touchState.aimX) + 'px';
-                aimJoystick.style.top = (25 + touchState.aimY) + 'px';
-            }
-        });
-        aimControls.addEventListener('touchend', (e) => {
-            e.preventDefault();
-            touchState.aiming = false;
             touchState.shooting = false;
-            touchState.aimX = 0;
-            touchState.aimY = 0;
-            aimJoystick.style.left = '25px';
-            aimJoystick.style.top = '25px';
-        });
-    } else {
-        canvas.addEventListener('mousemove', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            mouseX = e.clientX - rect.left;
-            mouseY = e.clientY - rect.top;
-        });
-        canvas.addEventListener('mousedown', (e) => {
-            if (e.button === 0) touchState.shooting = true;
-        });
-        canvas.addEventListener('mouseup', (e) => {
-            if (e.button === 0) touchState.shooting = false;
         });
     }
 
@@ -289,12 +276,17 @@ window.onload = () => {
         } else if (data.type === 'bullet') {
             bullets.push(data.bullet);
         } else if (data.type === 'health') {
-            players[data.id].health = data.health;
-            players[data.id].lives = data.lives;
+            if (players[data.id]) {
+                players[data.id].health = data.health;
+                players[data.id].lives = data.lives;
+            }
         } else if (data.type === 'powerUp') {
-            players[data.id].speed = data.speed;
-            players[data.id].shootCooldown = data.shootCooldown;
-            if (data.shield !== undefined) players[data.id].shield = data.shield;
+            if (players[data.id]) {
+                players[data.id].speed = data.speed || players[data.id].speed;
+                players[data.id].shootCooldown = data.shootCooldown || players[data.id].shootCooldown;
+                if (data.shield !== undefined) players[data.id].shield = data.shield;
+                if (data.homing !== undefined) players[data.id].homing = data.homing; // Added for homing
+            }
         } else if (data.type === 'chat') {
             document.getElementById('chat-box').innerHTML += `<p>${data.msg}</p>`;
         }
@@ -305,8 +297,8 @@ window.onload = () => {
     }
 
     function spawnPowerUp() {
-        if ((Object.keys(players).length === 2 || aiActive) && Math.random() < 0.005) {
-            const types = ['speed', 'rapid', 'shield', 'multi', 'health'];
+        if ((Object.keys(players).length === 2 || aiActive) && Math.random() < 0.002) { // Lowered from 0.005
+            const types = ['speed', 'rapid', 'shield', 'multi', 'health', 'homing'];
             let x, y, valid = false;
             do {
                 x = Math.random() * (canvas.width - 20);
@@ -333,12 +325,12 @@ window.onload = () => {
     }
 
     function checkCollision(x1, y1, x2, y2, w1 = 0, h1 = 0, w2 = 0, h2 = 0) {
-        if (w1 === 0 && h1 === 0) { // Circle-circle collision
+        if (w1 === 0 && h1 === 0) {
             const dx = x1 - x2;
             const dy = y1 - y2;
             const distance = Math.sqrt(dx * dx + dy * dy);
             return distance < PLAYER_SIZE;
-        } else { // Circle-rect collision
+        } else {
             const circleX = x1 + PLAYER_SIZE / 2;
             const circleY = y1 + PLAYER_SIZE / 2;
             const rectLeft = x2;
@@ -442,7 +434,7 @@ window.onload = () => {
         });
 
         ctx.fillStyle = 'white';
-        ctx.font = `${16 * scaleFactor}px Arial`; // Scale text
+        ctx.font = `${16 * scaleFactor}px Arial`;
         ctx.fillText(`You: ${players[playerId]?.lives || 0} lives`, 10 * scaleFactor, 20 * scaleFactor);
         const opponentId = Object.keys(players).find(id => id !== playerId);
         ctx.fillText(`Opponent: ${players[opponentId]?.lives || 0} lives`, canvas.width - 150 * scaleFactor, 20 * scaleFactor);
@@ -457,6 +449,7 @@ window.onload = () => {
                 me.speed = PLAYER_SPEED;
                 me.shootCooldown = 0;
                 me.shield = 0;
+                me.homing = 0; // Reset homing on respawn
                 flashTimer = 0.2;
                 playSound(100, 200);
                 if (conn && conn.open) sendData({ type: 'health', id: playerId, health: me.health, lives: me.lives });
@@ -464,6 +457,7 @@ window.onload = () => {
             if (me.lives <= 0) {
                 document.getElementById('status').textContent = aiActive ? 'Status: AI wins! Game Over' : 'Status: You lose!';
                 gameRunning = false;
+                bgMusic.pause();
                 setTimeout(() => location.reload(), 10000);
                 return;
             }
@@ -497,41 +491,43 @@ window.onload = () => {
                 const dx = mouseX - (me.x + PLAYER_SIZE / 2);
                 const dy = mouseY - (me.y + PLAYER_SIZE / 2);
                 me.angle = Math.atan2(dy, dx);
-            } else if (touchState.aiming) {
-                me.angle = Math.atan2(touchState.aimY, touchState.aimX);
-            } else {
-                me.angle = 0;
+            } else if (touchState.moving) {
+                me.angle = Math.atan2(touchState.moveY, touchState.moveX);
             }
 
-            if (touchState.shooting && me.shootCooldown <= 0) {
+            let isShooting = (isMobile && touchState.shooting) || (!isMobile && mouseDown);
+            if (isShooting && me.shootCooldown <= 0) {
                 const angle = me.angle || 0;
+                let bulletsToSpawn = [];
                 if (powerUps.some(p => p.type === 'multi' && Math.abs(p.x - me.x) < PLAYER_SIZE && Math.abs(p.y - me.y) < PLAYER_SIZE)) {
                     for (let offset = -0.26; offset <= 0.26; offset += 0.26) {
-                        const bullet = { 
-                            x: me.x + PLAYER_SIZE / 2 + Math.cos(angle + offset) * PLAYER_SIZE, 
-                            y: me.y + PLAYER_SIZE / 2 + Math.sin(angle + offset) * PLAYER_SIZE, 
-                            owner: playerId, 
-                            dx: Math.cos(angle + offset) * BULLET_SPEED, 
-                            dy: Math.sin(angle + offset) * BULLET_SPEED 
-                        };
-                        bullets.push(bullet);
+                        bulletsToSpawn.push({
+                            x: me.x + PLAYER_SIZE / 2 + Math.cos(angle + offset) * PLAYER_SIZE,
+                            y: me.y + PLAYER_SIZE / 2 + Math.sin(angle + offset) * PLAYER_SIZE,
+                            owner: playerId,
+                            dx: Math.cos(angle + offset) * BULLET_SPEED,
+                            dy: Math.sin(angle + offset) * BULLET_SPEED,
+                            homing: me.homing > 0
+                        });
                     }
                 } else {
-                    const bullet = { 
-                        x: me.x + PLAYER_SIZE / 2 + Math.cos(angle) * PLAYER_SIZE, 
-                        y: me.y + PLAYER_SIZE / 2 + Math.sin(angle) * PLAYER_SIZE, 
-                        owner: playerId, 
-                        dx: Math.cos(angle) * BULLET_SPEED, 
-                        dy: Math.sin(angle) * BULLET_SPEED 
-                    };
-                    bullets.push(bullet);
+                    bulletsToSpawn.push({
+                        x: me.x + PLAYER_SIZE / 2 + Math.cos(angle) * PLAYER_SIZE,
+                        y: me.y + PLAYER_SIZE / 2 + Math.sin(angle) * PLAYER_SIZE,
+                        owner: playerId,
+                        dx: Math.cos(angle) * BULLET_SPEED,
+                        dy: Math.sin(angle) * BULLET_SPEED,
+                        homing: me.homing > 0
+                    });
                 }
-                if (conn && conn.open) sendData({ type: 'bullet', bullet });
+                bullets.push(...bulletsToSpawn);
+                if (conn && conn.open) bulletsToSpawn.forEach(bullet => sendData({ type: 'bullet', bullet }));
                 me.shootCooldown = SHOOT_COOLDOWN;
                 playSound(400, 100);
             }
             if (me.shootCooldown > 0) me.shootCooldown -= deltaTime;
             if (me.shield > 0) me.shield -= deltaTime;
+            if (me.homing > 0) me.homing -= deltaTime; // Decrease homing timer
             if (conn && conn.open) sendData({ type: 'move', id: playerId, x: me.x, y: me.y, angle: me.angle });
         }
 
@@ -546,10 +542,12 @@ window.onload = () => {
                 ai.speed = AI_SPEED;
                 ai.shootCooldown = 0;
                 ai.shield = 0;
+                ai.homing = 0; // Reset homing on AI respawn
             }
             if (ai.lives <= 0) {
                 document.getElementById('status').textContent = 'Status: You win! AI defeated';
                 gameRunning = false;
+                bgMusic.pause();
                 setTimeout(() => location.reload(), 10000);
                 return;
             }
@@ -583,7 +581,8 @@ window.onload = () => {
                     y: ai.y + PLAYER_SIZE / 2 + Math.sin(ai.angle) * PLAYER_SIZE, 
                     owner: 'ai', 
                     dx: Math.cos(ai.angle) * BULLET_SPEED, 
-                    dy: Math.sin(ai.angle) * BULLET_SPEED 
+                    dy: Math.sin(ai.angle) * BULLET_SPEED,
+                    homing: ai.homing > 0 // AI can use homing too
                 };
                 bullets.push(bullet);
                 ai.shootCooldown = SHOOT_COOLDOWN;
@@ -591,6 +590,7 @@ window.onload = () => {
             }
             if (ai.shootCooldown > 0) ai.shootCooldown -= deltaTime;
             if (ai.shield > 0) ai.shield -= deltaTime;
+            if (ai.homing > 0) ai.homing -= deltaTime;
         }
 
         spawnPowerUp();
@@ -603,8 +603,9 @@ window.onload = () => {
                     else if (p.type === 'shield') pl.shield = 5;
                     else if (p.type === 'multi') {}
                     else if (p.type === 'health') pl.health = Math.min(100, pl.health + 50);
-                    if (conn && conn.open) sendData({ type: 'powerUp', id: id, speed: pl.speed, shootCooldown: pl.shootCooldown, shield: pl.shield });
-                    playSound(600, 100);
+                    else if (p.type === 'homing') pl.homing = HOMING_DURATION;
+                    if (conn && conn.open) sendData({ type: 'powerUp', id: id, speed: pl.speed, shootCooldown: pl.shootCooldown, shield: pl.shield, homing: pl.homing });
+                    playSound(p.type === 'homing' ? 700 : 600, 100);
                     return false;
                 }
             }
@@ -612,6 +613,31 @@ window.onload = () => {
         });
 
         bullets.forEach(b => {
+            if (b.homing) {
+                let nearestEnemy = null;
+                let minDist = Infinity;
+                for (let id in players) {
+                    if (id !== b.owner && players[id].lives > 0) {
+                        const p = players[id];
+                        const dist = Math.sqrt((p.x - b.x) ** 2 + (p.y - b.y) ** 2);
+                        if (dist < minDist) {
+                            minDist = dist;
+                            nearestEnemy = p;
+                        }
+                    }
+                }
+                if (nearestEnemy) {
+                    const targetAngle = Math.atan2(nearestEnemy.y - b.y, nearestEnemy.x - b.x);
+                    const currentAngle = Math.atan2(b.dy, b.dx);
+                    let angleDiff = targetAngle - currentAngle;
+                    if (angleDiff > Math.PI) angleDiff -= 2 * Math.PI;
+                    if (angleDiff < -Math.PI) angleDiff += 2 * Math.PI;
+                    const turnRate = 2 * deltaTime;
+                    const newAngle = currentAngle + Math.sign(angleDiff) * Math.min(Math.abs(angleDiff), turnRate);
+                    b.dx = Math.cos(newAngle) * BULLET_SPEED;
+                    b.dy = Math.sin(newAngle) * BULLET_SPEED;
+                }
+            }
             b.x += b.dx * deltaTime;
             b.y += b.dy * deltaTime;
         });
@@ -648,9 +674,14 @@ window.onload = () => {
         });
 
         powerUps.forEach(p => {
-            ctx.fillStyle = p.type === 'speed' ? 'yellow' : p.type === 'rapid' ? 'green' : p.type === 'shield' ? 'blue' : p.type === 'multi' ? 'purple' : 'orange';
+            ctx.fillStyle = p.type === 'speed' ? 'yellow' : 
+                           p.type === 'rapid' ? 'green' : 
+                           p.type === 'shield' ? 'blue' : 
+                           p.type === 'multi' ? 'purple' : 
+                           p.type === 'health' ? 'orange' : 
+                           p.type === 'homing' ? 'pink' : 'white';
             ctx.beginPath();
-            ctx.arc(p.x, p.y, 10, 0, Math.PI * 2); // No scaling here, keep power-up size fixed
+            ctx.arc(p.x, p.y, 10, 0, Math.PI * 2);
             ctx.fill();
         });
 
@@ -670,7 +701,7 @@ window.onload = () => {
             }
 
             ctx.fillStyle = 'white';
-            ctx.font = `${12 * scaleFactor}px Arial`; // Scale text
+            ctx.font = `${12 * scaleFactor}px Arial`;
             ctx.textAlign = 'center';
             ctx.fillText(id.slice(0, 5), p.x + PLAYER_SIZE / 2, p.y - 15 * scaleFactor);
 
@@ -690,7 +721,7 @@ window.onload = () => {
 
         ctx.fillStyle = 'white';
         bullets.forEach(b => {
-            ctx.fillRect(b.x, b.y, 5, 2); // Bullet size fixed, not scaled
+            ctx.fillRect(b.x, b.y, 5, 2);
             ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
             ctx.fillRect(b.x - 5, b.y, 3, 2);
         });
@@ -698,7 +729,7 @@ window.onload = () => {
         ctx.fillStyle = 'red';
         particles.forEach(p => {
             ctx.beginPath();
-            ctx.arc(p.x, p.y, 2, 0, Math.PI * 2); // Particle size fixed
+            ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
             ctx.fill();
         });
 
