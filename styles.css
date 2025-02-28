@@ -175,8 +175,10 @@ body {
     background: #0f1626;
 }
 
+/* About Text (Desktop) */
 .about-text {
     max-width: 500px;
+    text-align: left;
 }
 
 .about-text h2 {
@@ -206,6 +208,7 @@ body {
     transform: translateY(-2px);
 }
 
+/* About Image (Desktop) */
 .about-image img {
     width: 300px;
     border-radius: 50%;
@@ -369,12 +372,27 @@ footer {
 
     .about {
         flex-direction: column;
-        gap: 2rem;
-        padding: 2rem;
+        align-items: center;
+        padding: 2rem 1rem;
+        gap: 1.5rem;
     }
 
-    .about-text, .about-image {
-        width: 100%;
+    .about-text {
+        max-width: 100%;
+        text-align: center;
+    }
+
+    .about-text h2 {
+        font-size: 2rem;
+    }
+
+    .about-text p {
+        font-size: 0.9rem;
+    }
+
+    .button {
+        padding: 0.6rem 1.2rem;
+        font-size: 0.9rem;
     }
 
     .about-image img {
@@ -418,7 +436,7 @@ footer {
     }
 }
 
-/* Small tweaks for iPhone 15 Pro Max (430px wide in portrait) */
+/* Fine-tune for iPhone 15 Pro Max (430px wide in portrait) */
 @media (max-width: 480px) {
     .hero h1 {
         font-size: 2rem;
@@ -442,11 +460,20 @@ footer {
     }
 
     .about-text h2 {
-        font-size: 2rem;
+        font-size: 1.8rem;
     }
 
     .about-text p {
-        font-size: 0.9rem;
+        font-size: 0.85rem;
+    }
+
+    .button {
+        padding: 0.5rem 1rem;
+        font-size: 0.85rem;
+    }
+
+    .about-image img {
+        width: 180px;
     }
 
     .connect h2 {
