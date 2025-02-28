@@ -36,7 +36,7 @@ body {
     color: #a3bffa;
     text-decoration: none;
     font-weight: bold;
-    transition: color 0.3s;
+    transition: color 0.3s ease;
 }
 
 .navbar a:hover {
@@ -69,12 +69,14 @@ body {
     font-size: 4rem;
     z-index: 1;
     animation: fadeIn 2s ease-in;
+    color: #fff;
 }
 
 .hero p {
     font-size: 1.5rem;
     z-index: 1;
     margin-top: 1rem;
+    color: #b0b0c0;
 }
 
 @keyframes fadeIn {
@@ -88,6 +90,7 @@ body {
     display: flex;
     justify-content: center;
     gap: 2rem;
+    flex-wrap: wrap;
 }
 
 .card {
@@ -101,7 +104,7 @@ body {
     width: 100%;
     height: 100%;
     transform-style: preserve-3d;
-    transition: transform 0.6s;
+    transition: transform 0.6s ease;
 }
 
 .card:hover .card-inner {
@@ -113,10 +116,12 @@ body {
     width: 100%;
     height: 100%;
     backface-visibility: hidden;
-    background: #16213e;
+    background: rgba(22, 33, 62, 0.9);
     border-radius: 10px;
     padding: 2rem;
     text-align: center;
+    border: 1px solid rgba(163, 191, 250, 0.1);
+    backdrop-filter: blur(5px);
 }
 
 .card-front {
@@ -147,12 +152,14 @@ body {
 .card-back p {
     font-size: 1rem;
     margin-bottom: 1rem;
+    color: #d0d0e0;
 }
 
 .card-back a {
     color: #a3bffa;
     text-decoration: none;
     font-weight: bold;
+    transition: color 0.3s ease;
 }
 
 .card-back a:hover {
@@ -164,7 +171,6 @@ body {
     padding: 4rem 2rem;
     display: flex;
     justify-content: center;
-    align-items: center;
     gap: 3rem;
     background: #0f1626;
 }
@@ -176,10 +182,12 @@ body {
 .about-text h2 {
     font-size: 2.5rem;
     margin-bottom: 1rem;
+    color: #98d7c2;
 }
 
 .about-text p {
     margin-bottom: 1rem;
+    color: #d0d0e0;
 }
 
 .button {
@@ -190,11 +198,12 @@ body {
     text-decoration: none;
     border-radius: 5px;
     font-weight: bold;
-    transition: background 0.3s;
+    transition: background 0.3s ease, transform 0.2s ease;
 }
 
 .button:hover {
     background: #fff;
+    transform: translateY(-2px);
 }
 
 .about-image img {
@@ -217,18 +226,20 @@ body {
 .connect h2 {
     font-size: 2.5rem;
     margin-bottom: 2rem;
+    color: #98d7c2;
 }
 
 .social-icons {
     display: flex;
     justify-content: center;
     gap: 2rem;
+    flex-wrap: wrap;
 }
 
 .social-icons a {
     color: #a3bffa;
     font-size: 3rem;
-    transition: transform 0.3s, color 0.3s;
+    transition: transform 0.3s ease, color 0.3s ease;
 }
 
 .social-icons a:hover {
@@ -244,24 +255,35 @@ footer {
 }
 
 .footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
     display: flex;
     justify-content: space-between;
-    max-width: 1200px;
-    margin: 0 auto 2rem;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+.contact-info, .footer-logo, .social-media-footer {
+    flex: 1;
+    min-width: 200px;
 }
 
 .contact-info h4, .social-media-footer h4 {
     margin-bottom: 1rem;
+    color: #98d7c2;
 }
 
 .social-icons-footer {
     display: flex;
     gap: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
 .social-icons-footer a {
     color: #a3bffa;
     font-size: 1.5rem;
+    transition: color 0.3s ease;
 }
 
 .social-icons-footer a:hover {
@@ -270,9 +292,168 @@ footer {
 
 .footer-logo h2 {
     font-size: 2rem;
+    color: #98d7c2;
 }
 
 .copyright {
     text-align: center;
     font-size: 0.9rem;
+    margin-top: 1.5rem;
+}
+
+/* Music Control */
+.music-control {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(22, 33, 62, 0.9);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    backdrop-filter: blur(5px);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.music-control label {
+    color: #fff;
+    font-size: 0.9rem;
+}
+
+#volumeSlider {
+    width: 100px;
+    accent-color: #a3bffa;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .navbar ul {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .navbar li {
+        margin: 0.5rem 0;
+    }
+
+    .hero {
+        height: auto;
+        padding: 2rem;
+    }
+
+    .hero h1 {
+        font-size: 2.5rem;
+    }
+
+    .hero p {
+        font-size: 1.2rem;
+    }
+
+    .links {
+        gap: 1rem;
+    }
+
+    .card {
+        width: 200px;
+        height: 250px;
+    }
+
+    .card-front i {
+        font-size: 2.5rem;
+    }
+
+    .card-front h3, .card-back p {
+        font-size: 0.9rem;
+    }
+
+    .about {
+        flex-direction: column;
+        gap: 2rem;
+        padding: 2rem;
+    }
+
+    .about-text, .about-image {
+        width: 100%;
+    }
+
+    .about-image img {
+        width: 200px;
+    }
+
+    .connect h2 {
+        font-size: 2rem;
+    }
+
+    .social-icons {
+        gap: 1.5rem;
+    }
+
+    .social-icons a {
+        font-size: 2.5rem;
+    }
+
+    .footer-content {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .contact-info, .footer-logo, .social-media-footer {
+        margin-bottom: 1.5rem;
+    }
+
+    .social-icons-footer {
+        justify-content: center;
+    }
+
+    .music-control {
+        bottom: 10px;
+        right: 10px;
+        padding: 0.3rem 0.8rem;
+    }
+
+    #volumeSlider {
+        width: 80px;
+    }
+}
+
+/* Small tweaks for iPhone 15 Pro Max (430px wide in portrait) */
+@media (max-width: 480px) {
+    .hero h1 {
+        font-size: 2rem;
+    }
+
+    .hero p {
+        font-size: 1rem;
+    }
+
+    .card {
+        width: 180px;
+        height: 230px;
+    }
+
+    .card-front i {
+        font-size: 2rem;
+    }
+
+    .card-front h3, .card-back p {
+        font-size: 0.8rem;
+    }
+
+    .about-text h2 {
+        font-size: 2rem;
+    }
+
+    .about-text p {
+        font-size: 0.9rem;
+    }
+
+    .connect h2 {
+        font-size: 1.8rem;
+    }
+
+    .social-icons a {
+        font-size: 2rem;
+    }
 }

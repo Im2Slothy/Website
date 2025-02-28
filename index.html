@@ -14,14 +14,14 @@
             <ul>
                 <li><a href="index.html">Home</a></li>
                 <li><a href="portfolio.html">Portfolio</a></li>
-                <li><a href="game.html">Check out my browser-multiplayer Game</a></li>
+                <li><a href="game.html">Check out my Browser-Multiplayer Game</a></li>
             </ul>
         </nav>
     </header>
     <main>
         <section class="hero">
-            <h1>Slothy’s Digital Hangout</h1>
-            <p>Projects, streams, and code—served with a side of chill.</p>
+            <h1>Slothy’s Website</h1>
+            <p>My Projects, Links, and Info!</p>
         </section>
         <section class="links">
             <div class="card">
@@ -31,7 +31,7 @@
                         <h3>Discord</h3>
                     </div>
                     <div class="card-back">
-                        <p>Bots I’ve built and run—join the fun!</p>
+                        <p>Bots I’ve built and run.</p>
                         <a href="https://discord.gg/BKBMwmZ8hs">Check it out</a>
                     </div>
                 </div>
@@ -55,7 +55,7 @@
                         <h3>CFX Scripts</h3>
                     </div>
                     <div class="card-back">
-                        <p>Lua scripts for CFX games—code with me!</p>
+                        <p>Lua scripts built for the CFX framework (FiveM/RedM)</p>
                         <a href="https://github.com/stars/Im2Slothy/lists/lua-fivem-redm-scripts">Explore</a>
                     </div>
                 </div>
@@ -64,7 +64,7 @@
         <section class="about">
             <div class="about-text">
                 <h2>Who’s This Sloth?</h2>
-                <p>I'm a college sophomore Studying Infomation Systems + Data Science and a CS minor. I code, stream, and nap—sometimes all at once.</p>
+                <p>I'm a college sophomore studying Information Systems + Data Science with a CS minor. I code, stream, and nap—sometimes all at once.</p>
                 <p>Love my work? Share it with your crew!</p>
                 <a href="https://discord.com/invite/nfg2rhjPuu" class="button">Dive Deeper</a>
             </div>
@@ -107,5 +107,35 @@
             <p>© 2025 Chris B. All rights reserved.</p>
         </div>
     </footer>
+
+    <!-- Audio and Volume Control -->
+    <audio id="backgroundMusic" loop>
+        <source src="audio/dk.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+    <div class="music-control">
+        <label for="volumeSlider">Volume:</label>
+        <input type="range" id="volumeSlider" min="0" max="1" step="0.1" value="0.5">
+    </div>
+    
+    <script>
+        const audio = document.getElementById('backgroundMusic');
+        const volumeSlider = document.getElementById('volumeSlider');
+
+        // Start music on user interaction (required for modern browsers)
+        document.addEventListener('click', () => {
+            if (!audio.playing) {
+                audio.play().catch(error => console.log("Audio play failed:", error));
+            }
+        });
+
+        // Set initial volume
+        audio.volume = volumeSlider.value;
+
+        // Update volume when slider changes
+        volumeSlider.addEventListener('input', () => {
+            audio.volume = volumeSlider.value;
+        });
+    </script>
 </body>
 </html>
