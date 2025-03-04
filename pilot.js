@@ -403,19 +403,38 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    // Update crosshair canvas size
+    crosshairCanvas.width = window.innerWidth;
+    crosshairCanvas.height = window.innerHeight;
+}
+
   // Play button
   document.getElementById('play-button').addEventListener('click', () => {
     document.getElementById('landing-page').style.display = 'none'; // Hide the landing page
+    enableAudio(); // Fixes muted audio issue
     startGame();
-  });
+});
+
+function enableAudio() {
+    shootSound.play().catch(() => {});
+    explosionSound.play().catch(() => {});
+    hitSound.play().catch(() => {});
+    deathSound.play().catch(() => {});
+}
+
 
   let gameStarted = false; // Prevents movement/shooting before pressing play
 
   // Game initialization
   function startGame() {
-    gameStarted = true; // Allow movement and shooting after starting the game
+    gameStarted = true;
 
-    // Attach controls AFTER the game starts
+    // Attach controls
     document.addEventListener('keydown', onKeyDown);
     document.addEventListener('keyup', onKeyUp);
     document.addEventListener('mousemove', onMouseMove);
@@ -423,34 +442,47 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('resize', onWindowResize);
 
     spawnAsteroids();
-    spawnAIShip(); // Start AI spawning
+    spawnAIShip();
     updateUI();
     updateCrosshair();
 
     // Lock the mouse when the game starts
     document.body.requestPointerLock();
 
-    // Handle pointer lock change
+    // Ensure pointer lock stays active
     document.addEventListener('pointerlockchange', () => {
-      gamePaused = document.pointerLockElement !== document.body;
+        if (document.pointerLockElement !== document.body) {
+            document.body.requestPointerLock();
+        }
     });
+
+    // Hide the default cursor
+    document.body.style.cursor = 'none';
 
     // Start animation loop
     animate();
-  }
+}
 
-  // Improved shooting (Mouse Button 1)
+
   function shootBullet() {
     if (!gameStarted || gamePaused) return;
 
-    const direction = new THREE.Vector3(0, 0, -1);
-    direction.applyQuaternion(playerShip.quaternion); // Fire in the direction of the ship
+    // Raycast from camera through crosshair position
+    const mouseVector = new THREE.Vector2();
+    mouseVector.x = (parseInt(crosshairCanvas.style.left) / window.innerWidth) * 2 - 1;
+    mouseVector.y = -(parseInt(crosshairCanvas.style.top) / window.innerHeight) * 2 + 1;
 
-    const bulletSpeed = 15;
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(mouseVector, camera);
+
+    // Get bullet direction from ray
+    const direction = new THREE.Vector3();
+    raycaster.ray.direction.normalize();
+    direction.copy(raycaster.ray.direction);
 
     const bullet = new THREE.Mesh(bulletGeometry, bulletMaterial);
     bullet.position.copy(playerShip.position);
-    bullet.velocity = direction.clone().multiplyScalar(bulletSpeed);
+    bullet.velocity = direction.multiplyScalar(bulletSpeed);
     bullet.owner = peer.id;
 
     scene.add(bullet);
@@ -458,7 +490,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     shootSound.currentTime = 0; // Restart sound if spamming shots
     shootSound.play();
-  }
+}
+
+
 
   function updateBullets() {
     bullets.forEach((bullet, index) => {
@@ -487,23 +521,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const bullet = new THREE.Mesh(bulletGeometry, bulletMaterial);
     bullet.position.set(x, y, z);
 
-    // Use provided direction or calculate it
-    let direction;
-    if (dirX !== undefined && dirY !== undefined && dirZ !== undefined) {
-      direction = new THREE.Vector3(dirX, dirY, dirZ);
-    } else {
-      direction = new THREE.Vector3(0, 0, -1);
-      if (ownerId.startsWith('ai_')) {
-        const aiIndex = parseInt(ownerId.split('_')[1]);
-        const ai = aiShips[aiIndex];
-        if (ai && ai.target) {
-          const directionToTarget = ai.target.position.clone().sub(ai.position).normalize();
-          direction.copy(directionToTarget);
-        }
-      } else if (otherPlayers[ownerId]) {
-        direction.applyQuaternion(otherPlayers[ownerId].quaternion);
-      }
-    }
+    // Ensure the direction is properly normalized
+    let direction = new THREE.Vector3(dirX, dirY, dirZ).normalize();
 
     bullet.velocity = direction.multiplyScalar(bulletSpeed);
     bullet.owner = ownerId;
@@ -516,7 +535,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     scene.add(bullet);
     bullets.push(bullet);
-  }
+}
+
 
   // Improved AI ship behavior
   function spawnAIShip() {
@@ -597,10 +617,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Calculate intercept point (lead the target)
             const targetVelocity = ai.target.velocity || new THREE.Vector3();
             const interceptPoint = ai.target.position.clone().add(
-                targetVelocity.clone().multiplyScalar(distToTarget / bulletSpeed * 0.4) // Lower lead factor
-            );
-
-            const toIntercept = interceptPoint.clone().sub(ai.position);
+              ai.target.velocity.clone().multiplyScalar(distToTarget / bulletSpeed * 0.8) // Increased accuracy
+          );
+          const toIntercept = interceptPoint.clone().sub(ai.position).normalize();
             const dirToIntercept = toIntercept.normalize();
 
             // Calculate desired orientation
@@ -1198,19 +1217,42 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function onMouseMove(e) {
     if (!gameStarted) return;
-    mouseX = (e.clientX / window.innerWidth) * 2 - 1;
-    mouseY = (e.clientY / window.innerHeight) * 2 - 1;
-  }
 
-  // Handle window resize
-  function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    crosshairCanvas.width = window.innerWidth;
-    crosshairCanvas.height = window.innerHeight;
-    updateCrosshair();
-  }
+    // Get relative mouse movement
+    const movementX = e.movementX || 0;
+    const movementY = e.movementY || 0;
+
+    const sensitivity = 0.0025; // Adjust for desired feel
+
+    // Rotate the ship based on mouse movement
+    playerShip.rotation.y -= movementX * sensitivity; // Yaw (left/right)
+    playerShip.rotation.x += movementY * sensitivity; // Pitch (up/down, corrected)
+
+    // Prevent flipping (restrict extreme up/down movement)
+    const maxPitch = Math.PI / 3;
+    playerShip.rotation.x = Math.max(-maxPitch, Math.min(maxPitch, playerShip.rotation.x));
+
+    // Adjust crosshair movement based on mouse
+    let crosshairX = parseInt(crosshairCanvas.style.left || window.innerWidth / 2);
+    let crosshairY = parseInt(crosshairCanvas.style.top || window.innerHeight / 2);
+
+    // Smooth out the crosshair movement
+    crosshairX += movementX * 0.5;
+    crosshairY += movementY * 0.5;
+
+    // Keep the crosshair within screen bounds
+    crosshairX = Math.max(0, Math.min(window.innerWidth, crosshairX));
+    crosshairY = Math.max(0, Math.min(window.innerHeight, crosshairY));
+
+    crosshairCanvas.style.left = `${crosshairX}px`;
+    crosshairCanvas.style.top = `${crosshairY}px`;
+}
+
+  
+
+
+
+
 
   // Improved collision detection
   function checkCollisions() {
