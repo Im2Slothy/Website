@@ -1,37 +1,47 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pilot: Space Combat</title>
-  <link rel="stylesheet" href="pilot.css">
-</head>
-<body>
-  <div id="landing-page">
-    <h1>Pilot: Space Combat</h1>
-    <input type="text" id="player-name" placeholder="Enter your name" maxlength="12">
-    <p>Controls: WASD to move, Mouse to aim & fly, Mouse Button 1 to shoot, R to respawn</p>
-    <button id="play-button">PLAY</button>
-  </div>
-  <canvas id="minimap" width="200" height="200"></canvas>
-  <canvas id="crosshair" width="300" height="300"></canvas> <!-- Single crosshair -->
-  <div id="killfeed"></div>
-  <div id="ui-panel">
-    <div id="health-bar"><div id="health-fill"></div></div>
-    <p id="ammo">Shots Fired: 0</p>
-    <p id="kills">Kills: 0</p>
-    <p id="pilot-name">Pilot Name: Player</p>
-  </div>
-  <div id="game-over" class="hidden">
-    <h1>Game Over</h1>
-    <button id="play-again">Play Again</button>
-  </div>
-  <audio id="shoot-sound" src="https://cdn.pixabay.com/audio/2023/01/10/audio_7e4d2b2b-6f4d-4f4d-9f4d-2b2b6f4d9f4d.mp3" crossOrigin="anonymous"></audio>
-  <audio id="explosion-sound" src="https://cdn.pixabay.com/audio/2023/01/10/audio_7e4d2b2b-6f4d-4f4d-9f4d-2b2b6f4d9f4d.mp3" crossOrigin="anonymous"></audio>
-  <audio id="hit-sound" src="https://cdn.pixabay.com/audio/2023/01/10/audio_7e4d2b2b-6f4d-4f4d-9f4d-2b2b6f4d9f4d.mp3" crossOrigin="anonymous"></audio>
-  <audio id="death-sound" src="https://cdn.pixabay.com/audio/2023/01/10/audio_7e4d2b2b-6f4d-4f4d-9f4d-2b2b6f4d9f4d.mp3" crossOrigin="anonymous"></audio>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
-  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-  <script src="pilot.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" type="image/x-icon" href="img/sloth.png"/>
+    <title>PVP/AI Shooter</title>
+    <link rel="stylesheet" href="pilot.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="landing-page">
+      <h1>Pilot: Space Combat</h1>
+      <input type="text" id="player-name" placeholder="Enter your name" maxlength="12">
+      <p>Controls: WASD to move, Mouse to aim & fly, Mouse Button 1 to shoot, R to respawn, and Q and E to Roll.</p>
+      <button id="share-x-btn">Share on X</button>
+      <button id="play-button">PLAY</button>
+      <button id="main-website-btn" onclick="window.location.href='index.html'">Main Website</button>
+    </div>
+    <canvas id="minimap" width="200" height="200"></canvas>
+    <canvas id="crosshair" width="300" height="300"></canvas>
+    <div id="killfeed"></div>
+    <div id="ui-panel">
+      <div id="health-bar"><div id="health-fill"></div></div>
+      <p id="ammo">Shots Fired: 0</p>
+      <p id="kills">Kills: 0</p>
+      <p id="pilot-name">Pilot Name: Player</p>
+    </div>
+    <div id="game-over" class="hidden">
+      <h1>Game Over</h1>
+      <button id="play-again">Play Again</button>
+    </div>
+    <audio id="shoot-sound" src="https://cdn.pixabay.com/audio/2023/01/10/audio_7e4d2b2b-6f4d-4f4d-9f4d-2b2b6f4d9f4d.mp3" crossOrigin="anonymous"></audio>
+    <audio id="explosion-sound" src="https://cdn.pixabay.com/audio/2023/01/10/audio_7e4d2b2b-6f4d-4f4d-9f4d-2b2b6f4d9f4d.mp3" crossOrigin="anonymous"></audio>
+    <audio id="hit-sound" src="https://cdn.pixabay.com/audio/2023/01/10/audio_7e4d2b2b-6f4d-4f4d-9f4d-2b2b6f4d9f4d.mp3" crossOrigin="anonymous"></audio>
+    <audio id="death-sound" src="https://cdn.pixabay.com/audio/2023/01/10/audio_7e4d2b2b-6f4d-4f4d-9f4d-2b2b6f4d9f4d.mp3" crossOrigin="anonymous"></audio>
+
+    <!-- Three.js core library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <!-- FontLoader as a regular script (not module) -->
+    <script src="https://unpkg.com/three@0.134.0/examples/js/loaders/FontLoader.js"></script>
+    <!-- PeerJS -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <!-- Your game script -->
+    <script src="pilot.js"></script>
+  </body>
 </html>
