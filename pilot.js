@@ -266,7 +266,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const bulletSpeed = 8.0; // Increased bullet speed
 
   // Improved movement constants
-  const maxSpeed = 1.2; // Significantly increased max speed
   const acceleration = 0.05; // Increased acceleration for responsiveness
   const deceleration = 0.02; // Reduced deceleration for smoother movement
   const rotationSpeed = 0.15; // Faster rotation for better control
@@ -1781,7 +1780,7 @@ let lastKillTime = 0;
         // Apply keyboard controls
         const speedMultiplier = keys.boost ? 1.5 : 1.0; // Slightly reduced boost
         const acceleration = 0.05; // Reduced acceleration
-        const maxSpeed = 1.2; // Reduced max speed
+        let maxSpeed = 1.2; // Reduced max speed
         const deceleration = 0.03; // Slightly increased deceleration for smoother stops
 
         if (keys.forward) {
