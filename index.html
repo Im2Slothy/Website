@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <link rel="shortcut icon" type="image/x-icon" href="https://im2slothy.github.io/Website/img/slothfoot.png"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Slothy's Chill Zone</title>
+    <title>Slothy | Projects & Links</title>
     <script src="https://use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -14,15 +14,16 @@
             <ul>
                 <li><a href="index.html">Home</a></li>
                 <li><a href="portfolio.html">Portfolio</a></li>
-                <li><a href="game.html">2D 1v1 Shooter Multiplayer Game</a></li>
-                <li><a href="pilot.html">3D Multiplayer Space Shooter</a></li>
+                <li><a href="game.html">2D Shooter</a></li>
+                <li><a href="pilot.html">Pilot: Space Combat</a></li>
             </ul>
         </nav>
     </header>
     <main>
         <section class="hero">
-            <h1>Slothy(Chris') Website</h1>
-            <p>My Projects, Links, and Info!</p>
+            <p class="eyebrow">Projects, games, scripts, and links</p>
+            <h1>Slothy's Chill Zone</h1>
+            <p>Small builds, experiments, and places to find me online.</p>
         </section>
         <section class="links">
             <div class="card">
@@ -32,7 +33,7 @@
                         <h3>Discord</h3>
                     </div>
                     <div class="card-back">
-                        <p>Bots I’ve built and run.</p>
+                        <p>Bots I've built and run.</p>
                         <a href="https://discord.gg/BKBMwmZ8hs">Check it out</a>
                     </div>
                 </div>
@@ -44,7 +45,7 @@
                         <h3>Twitch</h3>
                     </div>
                     <div class="card-back">
-                        <p>Streaming all the vibes—come hang!</p>
+                        <p>Streaming all the vibes. Come hang.</p>
                         <a href="https://twitch.tv/Im2Slothy">Watch now</a>
                     </div>
                 </div>
@@ -65,8 +66,8 @@
         <section class="about">
             <div class="about-text">
                 <h2>Who am I?</h2>
-                <p>I'm a college sophomore studying Information Systems + Data Science with a CS minor.</p>
-                <p>Find my work interesting? Share it with others!</p>
+                <p>I'm a Senior studying Information Systems and Data Science with a CS Minor.</p>
+                <p>I like building useful web projects, Discord tools, scripts, and little games that are fun to mess with.</p>
                 <a href="https://discord.com/invite/nfg2rhjPuu" class="button">Dive Deeper</a>
             </div>
             <div class="about-image">
@@ -74,7 +75,7 @@
             </div>
         </section>
         <section class="connect">
-            <h2>Link Up</h2>
+            <h2>Socials</h2>
             <div class="social-icons">
                 <a href="https://twitch.tv/Im2Slothy"><i class="fab fa-twitch"></i></a>
                 <a href="https://twitter.com/Im2Slothy"><i class="fab fa-twitter"></i></a>
@@ -88,7 +89,7 @@
         <div class="footer-content">
             <div class="contact-info">
                 <h4>Contact</h4>
-                <p>Email: chrisbennett555@yahoo.com</p>
+                <p>Email: chrisbennett0528@gmail.com</p>
             </div>
             <div class="footer-logo">
                 <h2>Stay Slothy!</h2>
@@ -105,7 +106,7 @@
             </div>
         </div>
         <div class="copyright">
-            <p>© 2025 Chris B. All rights reserved.</p>
+            <p>&copy; 2026 Chris B. All rights reserved.</p>
         </div>
     </footer>
 
@@ -125,10 +126,10 @@
 
         // Start music on user interaction (required for modern browsers)
         document.addEventListener('click', () => {
-            if (!audio.playing) {
+            if (audio.paused) {
                 audio.play().catch(error => console.log("Audio play failed:", error));
             }
-        });
+        }, { once: true });
 
         // Set initial volume
         audio.volume = volumeSlider.value;

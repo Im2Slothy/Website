@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <link rel="shortcut icon" type="image/x-icon" href="https://im2slothy.github.io/Website/img/slothfoot.png"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Slothy's Portfolio</title>
+    <title>Slothy | Portfolio</title>
     <script src="https://use.fontawesome.com/releases/v5.0.8/js/all.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
     <link rel="stylesheet" href="portfolio.css">
@@ -13,95 +13,95 @@
     <header>
         <nav class="navbar">
             <div class="nav-container">
-                <a class="nav-logo" href="index.html"><i class="fas fa-leaf"></i> Slothy</a>
+                <a class="nav-logo" href="index.html">Slothy</a>
                 <ul>
                     <li><a href="index.html">Home</a></li>
-                    <li><a href="bots.html">Portfolio</a></li>
+                    <li><a href="portfolio.html">Portfolio</a></li>
+                    <li><a href="pilot.html">Pilot: Space Combat</a></li>
                 </ul>
             </div>
         </nav>
     </header>
     <main>
         <section class="portfolio-hero">
-            <h1>Slothy’s Portfolio</h1>
-            <p>Precision-crafted projects with a laid-back Slothy twist.</p>
+            <p class="eyebrow">Selected work</p>
+            <h1>Projects with real users, real communities, and real maintenance.</h1>
+            <p>A focused look at the bots, server work, tools, and web projects I have built or actively support.</p>
         </section>
         <section class="portfolio">
-            <div class="portfolio-card" data-aos="fade-up">
-                <div class="card-content">
-                    <div class="card-image">
-                        <img src="https://play-lh.googleusercontent.com/cvcQMYwlebh23KkUjShTZ4nzq1ubapxjOAjA5cdL41kdfOWKjfR7kgp0DOilfAnxTa8" alt="Talking Ben">
-                    </div>
-                    <h2>Talking Ben</h2>
-                    <p>[DISCORD VERIFIED BOT] - Coded on my iPad in May 2022 during math class, this Discord bot now powers 530+ servers and over 35,000 people, with slash command functionality.</p>
-                    <div class="card-buttons">
-                        <a href="https://discord.com/api/oauth2/authorize?client_id=954461518718709770&permissions=277025770560&scope=bot" class="button">Invite</a>
-                        <a href="https://discord.gg/DcdfXdSp7d" class="button">Support</a>
-                    </div>
-                </div>
-            </div>
-            <div class="portfolio-card" data-aos="fade-up" data-aos-delay="400">
+            <article class="portfolio-card featured" data-aos="fade-up">
                 <div class="card-content">
                     <div class="card-image">
                         <img src="./img/fallout_bot_logo.png" alt="Fallout Bot">
                     </div>
+                    <p class="project-rank">01 / Verified Discord Bot</p>
                     <h2>Vault-Tec Assistant</h2>
-                    <p>[DISCORD VERIFIED BOT] - Fallout-themed RPG bot serving 81,000+ users across 600+ servers. Features include health & resource management, expeditions, minigames like terminal hacking to blackjack, 24/7 fallout radio stations, and secure trading. Built with Python (discord.py) and SQLite.</p>
+                    <p>Fallout-themed RPG bot serving 85,000+ users across 750+ servers. It includes player progression, health and resource systems, expeditions, minigames, secure trading, and 24/7 Fallout radio. Built with Python, discord.py, and SQLite with an emphasis on reliability at scale.</p>
                     <div class="card-buttons">
-                        <a href="https://discord.com/oauth2/authorize?client_id=1107428963246166026" class="button">Invite to your Discord</a>
-                        <a href="discord.gg/mwgwWNcKVs" class="button">Support (Discord)</a>
+                        <a href="https://discord.com/oauth2/authorize?client_id=1107428963246166026" class="button">Invite</a>
+                        <a href="https://discord.gg/mwgwWNcKVs" class="button secondary">Support</a>
                     </div>
                 </div>
-            </div>
-            <div class="portfolio-card" data-aos="fade-up" data-aos-delay="400">
+            </article>
+
+            <article class="portfolio-card featured" data-aos="fade-up" data-aos-delay="100">
                 <div class="card-content">
                     <div class="card-image">
-                        <img src="./img/vatsim.jpg" alt="Fallout Bot">
+                        <img src="./img/mwrp.png" alt="Midwest Roleplay">
                     </div>
-                    <h2>Vatsim Notifications</h2>
-                    <p>I monitor the VATSIM network 24/7 to send your server instant alerts when air traffic controllers go live. Set up notifications for any airport and get pinged right away. Use /help to see all commands and get started!</p>
+                    <p class="project-rank">02 / FiveM Development</p>
+                    <h2>Midwest Roleplay Developer</h2>
+                    <p>Developer for Midwest Roleplay, a FiveM roleplay community with 500+ members. I fix production bugs, build and maintain Lua/JavaScript scripts, support server systems, and work with Git-based workflows and common FiveM development tools. The role involves real production responsibility: improving stability, shipping features, and supporting a live player community.</p>
                     <div class="card-buttons">
-                        <a href="https://discord.com/oauth2/authorize?client_id=1396856935541903503" class="button">Invite to your Discord</a>
-                        <a href="discord.gg/mwgwWNcKVs" class="button">Support (Discord)</a>
+                        <a href="https://midwestrp.net/" class="button">Website</a>
+                        <a href="https://gitlab.com/Im2Slothy" class="button secondary">GitLab</a>
                     </div>
                 </div>
-            </div>
-            <div class="portfolio-card" data-aos="fade-up" data-aos-delay="100">
+            </article>
+
+            <article class="portfolio-card" data-aos="fade-up" data-aos-delay="200">
+                <div class="card-content">
+                    <div class="card-image">
+                        <img src="https://play-lh.googleusercontent.com/cvcQMYwlebh23KkUjShTZ4nzq1ubapxjOAjA5cdL41kdfOWKjfR7kgp0DOilfAnxTa8" alt="Talking Ben">
+                    </div>
+                    <p class="project-rank">03 / Verified Discord Bot</p>
+                    <h2>Talking Ben</h2>
+                    <p>Discord verified bot originally built in 2022 that grew into a live project across 530+ servers and 35,000+ users. It supports slash commands and reflects my early experience shipping software that people actually use.</p>
+                    <div class="card-buttons">
+                        <a href="https://discord.com/api/oauth2/authorize?client_id=954461518718709770&permissions=277025770560&scope=bot" class="button">Invite</a>
+                        <a href="https://discord.gg/DcdfXdSp7d" class="button secondary">Support</a>
+                    </div>
+                </div>
+            </article>
+
+            <article class="portfolio-card" data-aos="fade-up" data-aos-delay="300">
+                <div class="card-content">
+                    <div class="card-image">
+                        <img src="./img/vatsim.jpg" alt="VATSIM Notifications">
+                    </div>
+                    <p class="project-rank">04 / Aviation Discord Tool</p>
+                    <h2>VATSIM Notifications</h2>
+                    <p>Discord bot that monitors the VATSIM network and sends server alerts when selected air traffic control positions come online. It supports airport-based notification setup and helps flight sim communities stay aware of live coverage.</p>
+                    <div class="card-buttons">
+                        <a href="https://discord.com/oauth2/authorize?client_id=1396856935541903503" class="button">Invite</a>
+                        <a href="https://discord.gg/mwgwWNcKVs" class="button secondary">Support</a>
+                    </div>
+                </div>
+            </article>
+
+            <article class="portfolio-card" data-aos="fade-up" data-aos-delay="400">
                 <div class="card-content">
                     <div class="card-image">
                         <img src="./img/lopey.png" alt="Lopey.TV">
                     </div>
+                    <p class="project-rank">05 / Web Platform</p>
                     <h2>Lopey.TV</h2>
-                    <p>A modern Omegle-inspired platform built with HTML, CSS, and JS. Instant text and video chats with a friend’s collaboration.</p>
+                    <p>Omegle-inspired web platform built with HTML, CSS, and JavaScript. The project focused on instant text and video chat flows, frontend polish, and collaboration with another developer.</p>
                     <div class="card-buttons">
                         <a href="https://lopey.tv" class="button">Visit</a>
                     </div>
                 </div>
-            </div>
-            <div class="portfolio-card" data-aos="fade-up" data-aos-delay="200">
-                <div class="card-content">
-                    <div class="card-image">
-                        <img src="https://im2slothy.github.io/Website/img/showcase.png" alt="Showcase Bot">
-                    </div>
-                    <h2>Showcase Bot</h2>
-                    <p>A feature-rich Discord bot using SQLite and Discord.py for economy management. Launching soon.</p>
-                    <div class="card-buttons">
-                        <a href="#" class="button">Soon™</a>
-                    </div>
-                </div>
-            </div>
-            <div class="portfolio-card" data-aos="fade-up" data-aos-delay="300">
-                <div class="card-content">
-                    <div class="card-image">
-                        <img src="https://im2slothy.github.io/Website/img/GSStudios.png" alt="Golden Sloth Studios">
-                    </div>
-                    <h2>Golden Sloth Studios</h2>
-                    <p>A professional landing page with bot showcases and a secure contact form. Still evolving with hidden gems.</p>
-                    <div class="card-buttons">
-                        <a href="https://im2slothy.github.io/goldensloth/" class="button">Visit</a>
-                    </div>
-                </div>
-            </div>
+            </article>
         </section>
     </main>
     <footer>
@@ -122,7 +122,7 @@
             </div>
         </div>
         <div class="copyright">
-            <p>© 2025 Slothy. All rights reserved.</p>
+            <p>&copy; 2026 Slothy. All rights reserved.</p>
         </div>
     </footer>
     <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
