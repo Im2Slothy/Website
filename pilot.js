@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
   const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setClearColor(0x000000);
   document.body.appendChild(renderer.domElement);
@@ -42,8 +43,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const killfeed = document.getElementById('killfeed');
   const gameOver = document.getElementById('game-over');
   const pilotNameText = document.getElementById('pilot-name');
+  const speedText = document.getElementById('speed');
+  const targetStatusText = document.getElementById('target-status');
   let shotsFired = 0;
   let kills = 0;
+  let animationStarted = false;
+  let aiSpawnTimer = null;
+  let asteroidsSpawned = false;
+  let combatTarget = null;
+  let playerMaxSpeed = 1.55;
+  let pointerLockAvailable = true;
+  let lastMouseX = null;
+  let lastMouseY = null;
 
 
   // Sound effects
@@ -57,6 +68,28 @@ document.addEventListener('DOMContentLoaded', () => {
   explosionSound.load();
   hitSound.load();
   deathSound.load();
+
+  function playSound(audio, volume, playbackRate) {
+    if (!audio || !audio.play) return;
+    if (typeof volume === 'number') audio.volume = volume;
+    if (typeof playbackRate === 'number') audio.playbackRate = playbackRate;
+    audio.currentTime = 0;
+    audio.play().catch(() => {});
+  }
+
+  function requestGamePointerLock() {
+    try {
+      const lockRequest = document.body.requestPointerLock?.();
+      if (lockRequest && lockRequest.catch) {
+        lockRequest.catch(() => {
+          pointerLockAvailable = false;
+        });
+      }
+    } catch (error) {
+      pointerLockAvailable = false;
+      // Some embedded browsers block pointer lock; mouse controls still work when supported.
+    }
+  }
 
   // Crosshair setup
   const crosshairCanvas = document.getElementById('crosshair');
@@ -382,10 +415,10 @@ document.addEventListener('DOMContentLoaded', () => {
           showGameOver();
           freezeGame();
           addKillfeed(conn.peer, myPlayerName); // Enemy killed player
-          deathSound.play(); // Play death sound
+          playSound(deathSound); // Play death sound
         }
         updateUI();
-        hitSound.play(); // Play hit sound
+        playSound(hitSound); // Play hit sound
       }
     });
   });
@@ -416,10 +449,10 @@ document.addEventListener('DOMContentLoaded', () => {
           showGameOver();
           freezeGame();
           addKillfeed(conn.peer, myPlayerName);
-          deathSound.play();
+          playSound(deathSound);
         }
         updateUI();
-        hitSound.play();
+        playSound(hitSound);
       }
     });
   }
@@ -444,6 +477,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Update crosshair canvas size
     crosshairCanvas.width = window.innerWidth;
     crosshairCanvas.height = window.innerHeight;
+    setReticleCenter();
 }
 
   function createPowerUp(position) {
@@ -463,8 +497,8 @@ document.addEventListener('DOMContentLoaded', () => {
   
       if (playerShip.position.distanceTo(powerUp.position) < 2 && playerShip.visible) {
         if (powerUp.type === 'speed') {
-          maxSpeed = 2.0; // Double speed
-          setTimeout(() => maxSpeed = 1.2, 5000); // 5 sec boost
+          playerMaxSpeed = 2.25;
+          setTimeout(() => playerMaxSpeed = 1.55, 5000);
         } else if (powerUp.type === 'shield') {
           playerShip.health = Math.min(playerShip.health + 2, 5); // +2 health, cap at 5
           updateUI();
@@ -484,11 +518,28 @@ document.addEventListener('DOMContentLoaded', () => {
     logToDiscord(message);
   });
 
+  document.getElementById('play-again').addEventListener('click', () => {
+    playerShip.visible = true;
+    playerShip.health = 5;
+    playerShip.position.set(0, 0, 0);
+    playerShip.velocity.set(0, 0, 0);
+    playerShip.quaternion.set(0, 0, 0, 1);
+    gameOver.style.display = 'none';
+    startGame();
+    updateUI();
+  });
+
 function enableAudio() {
-    shootSound.play().catch(() => {});
-    explosionSound.play().catch(() => {});
-    hitSound.play().catch(() => {});
-    deathSound.play().catch(() => {});
+    playSound(shootSound, 0);
+    playSound(explosionSound, 0);
+    playSound(hitSound, 0);
+    playSound(deathSound, 0);
+    setTimeout(() => {
+      shootSound.volume = 1;
+      explosionSound.volume = 1;
+      hitSound.volume = 1;
+      deathSound.volume = 1;
+    }, 100);
 }
 
 
@@ -499,10 +550,7 @@ function enableAudio() {
     gameStarted = true;
 
   // Initialize crosshair position
-  crosshairX = window.innerWidth / 2;
-  crosshairY = window.innerHeight / 2;
-  crosshairCanvas.style.left = `${crosshairX}px`;
-  crosshairCanvas.style.top = `${crosshairY}px`;
+  setReticleCenter();
 
     // Attach controls
     document.addEventListener('keydown', onKeyDown);
@@ -511,26 +559,33 @@ function enableAudio() {
     document.addEventListener('mousedown', onMouseDown);
     window.addEventListener('resize', onWindowResize);
 
-    spawnAsteroids();
-    spawnAIShip();
+    if (!asteroidsSpawned) {
+      spawnAsteroids();
+      asteroidsSpawned = true;
+    }
+    while (aiShips.length < 4) {
+      spawnAIShip(false);
+    }
     updateUI();
     updateCrosshair();
 
     // Lock the mouse when the game starts
-    document.body.requestPointerLock();
+    requestGamePointerLock();
 
     // Ensure pointer lock stays active
     document.addEventListener('pointerlockchange', () => {
-        if (document.pointerLockElement !== document.body) {
-            document.body.requestPointerLock();
+        if (pointerLockAvailable && document.pointerLockElement !== document.body) {
+            requestGamePointerLock();
         }
     });
 
     // Hide the default cursor
     document.body.style.cursor = 'none';
 
-    // Start animation loop
-    animate();
+    if (!animationStarted) {
+      animationStarted = true;
+      animate();
+    }
 }
 
 function shootBullet() {
@@ -539,21 +594,23 @@ function shootBullet() {
   let direction = new THREE.Vector3(0, 0, -1).applyQuaternion(playerShip.quaternion).normalize();
   
   // Find nearest AI ship within a 60° cone and 500-unit range
-  let nearestAI = null;
-  let minAngle = Math.cos(Math.PI / 3); // 60° cone
+  let nearestAI = combatTarget && combatTarget.visible ? combatTarget : null;
+  let minAngle = Math.cos(Math.PI / 5);
   let closestDist = Infinity;
-  aiShips.forEach(ai => {
-    if (!ai.visible) return;
-    const toAI = ai.position.clone().sub(playerShip.position);
-    const dist = toAI.length();
-    if (dist > 500) return;
-    const toAINormalized = toAI.clone().normalize();
-    const dot = direction.dot(toAINormalized);
-    if (dot > minAngle && dist < closestDist) {
-      nearestAI = ai;
-      closestDist = dist;
-    }
-  });
+  if (!nearestAI) {
+    aiShips.forEach(ai => {
+      if (!ai.visible) return;
+      const toAI = ai.position.clone().sub(playerShip.position);
+      const dist = toAI.length();
+      if (dist > 650) return;
+      const toAINormalized = toAI.clone().normalize();
+      const dot = direction.dot(toAINormalized);
+      if (dot > minAngle && dist < closestDist) {
+        nearestAI = ai;
+        closestDist = dist;
+      }
+    });
+  }
 
   // Set initial direction with slight homing
   if (nearestAI) {
@@ -562,12 +619,13 @@ function shootBullet() {
     const leadTime = toAI.length() / bulletSpeed;
     const leadPos = nearestAI.position.clone().add(aiVelocity.multiplyScalar(leadTime));
     const targetDir = leadPos.sub(playerShip.position).normalize();
-    direction.lerp(targetDir, 0.5); // Initial nudge
+    direction.lerp(targetDir, 0.32);
     direction.normalize();
   }
 
   const bullet = new THREE.Mesh(bulletGeometry, bulletMaterial.clone());
-  bullet.position.copy(playerShip.position);
+  const muzzleOffset = new THREE.Vector3((shotsFired % 2 === 0 ? -0.9 : 0.9), -0.05, -1.2).applyQuaternion(playerShip.quaternion);
+  bullet.position.copy(playerShip.position).add(muzzleOffset);
   bullet.velocity = direction.multiplyScalar(bulletSpeed);
   bullet.owner = peer.id;
   bullet.target = nearestAI; // Assign target for homing
@@ -584,8 +642,7 @@ function shootBullet() {
   scene.add(bullet);
   bullets.push(bullet);
 
-  shootSound.currentTime = 0;
-  shootSound.play();
+  playSound(shootSound);
 
   shotsFired++;
   updateUI();
@@ -646,7 +703,11 @@ function updateBullets() {
   }
 
   function spawnEnemyBullet(x, y, z, dirX, dirY, dirZ, ownerId) {
-    const bullet = new THREE.Mesh(bulletGeometry, bulletMaterial);
+    const enemyMaterial = bulletMaterial.clone();
+    enemyMaterial.color.setHex(0xff3b30);
+    enemyMaterial.emissive.setHex(0xff1f1f);
+    enemyMaterial.emissiveIntensity = 0.85;
+    const bullet = new THREE.Mesh(bulletGeometry, enemyMaterial);
     bullet.position.set(x, y, z);
 
     // Ensure the direction is properly normalized
@@ -667,12 +728,25 @@ function updateBullets() {
 
 
   // Improved AI ship behavior
-  function spawnAIShip() {
+  function spawnAIShip(scheduleNext = true) {
+    if (aiShips.filter(ship => ship.visible).length >= 7) {
+      if (scheduleNext && !aiSpawnTimer) {
+        aiSpawnTimer = setTimeout(() => {
+          aiSpawnTimer = null;
+          spawnAIShip(true);
+        }, 3500);
+      }
+      return;
+    }
+
     const aiShip = createAIShip();
-    aiShip.health = 3;
+    aiShip.health = 5;
+    aiShip.maxHealth = 5;
+    aiShip.callsign = `Vanduul-${Math.floor(100 + Math.random() * 900)}`;
+    aiShip.aggression = 0.75 + Math.random() * 0.5;
 
     // Spawn AI within visible range but not too close
-    const distanceFromPlayer = 100 + Math.random() * 150;
+    const distanceFromPlayer = 150 + Math.random() * 190;
     const randomAngle = Math.random() * Math.PI * 2;
 
     aiShip.position.set(
@@ -684,8 +758,8 @@ function updateBullets() {
     aiShip.rotation.set(0, Math.random() * Math.PI * 2, 0);
     aiShip.velocity = new THREE.Vector3(0, 0, 0);
     aiShip.target = null;
-    aiShip.nextShotTime = performance.now() + 3000 + Math.random() * 1000; // Random initial delay
-    aiShip.maneuverTime = performance.now() + 6000 + Math.random() * 6000; // Time until next maneuver
+    aiShip.nextShotTime = performance.now() + 800 + Math.random() * 1300;
+    aiShip.maneuverTime = performance.now() + 1200 + Math.random() * 1800;
     aiShip.maneuverDir = new THREE.Vector3(
       Math.random() - 0.5,
       Math.random() - 0.5,
@@ -695,7 +769,12 @@ function updateBullets() {
     scene.add(aiShip);
     aiShips.push(aiShip);
 
-    setTimeout(() => spawnAIShip(), 5000 + Math.random() * 3000); // Variable spawn rate
+    if (scheduleNext && gameStarted && !aiSpawnTimer) {
+      aiSpawnTimer = setTimeout(() => {
+        aiSpawnTimer = null;
+        spawnAIShip(true);
+      }, 3200 + Math.random() * 2600);
+    }
   }
 
   function updateAIShips(time, delta) {
@@ -730,10 +809,9 @@ function updateBullets() {
             }
         }
 
-        // AI movement speed adjustments
-        const aiAcceleration = 0.04 * delta; // Down from 0.05
-        const aiMaxSpeed = 0.7; // Down from 0.8
-        const aiStrafeSpeed = 0.05 * delta; // Down from 0.06
+        const aiAcceleration = 0.075 * ai.aggression * delta;
+        const aiMaxSpeed = 1.05 + ai.aggression * 0.25;
+        const aiStrafeSpeed = 0.09 * ai.aggression * delta;
 
         // Advanced AI behavior with targeting and evasion
         if (ai.target) {
@@ -745,57 +823,48 @@ function updateBullets() {
             // Calculate intercept point (lead the target)
             const targetVelocity = ai.target.velocity || new THREE.Vector3();
             const interceptPoint = ai.target.position.clone().add(
-              ai.target.velocity.clone().multiplyScalar(distToTarget / bulletSpeed * 0.8) // Increased accuracy
+              targetVelocity.clone().multiplyScalar(distToTarget / bulletSpeed * 1.25)
           );
           const toIntercept = interceptPoint.clone().sub(ai.position).normalize();
             const dirToIntercept = toIntercept.normalize();
 
             // Calculate desired orientation
             const targetQuat = new THREE.Quaternion();
-            targetQuat.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dirToIntercept);
+            targetQuat.setFromUnitVectors(new THREE.Vector3(0, 0, -1), dirToIntercept);
 
             // Smoothly rotate toward target
-            ai.quaternion.slerp(targetQuat, 0.02); // Even slower rotation
+            ai.quaternion.slerp(targetQuat, 0.055 + ai.aggression * 0.025);
 
             // Maintain optimal combat distance
-            const optimalDistance = 60 + Math.random() * 50; // Increased engagement distance
+            const optimalDistance = 95 + ai.aggression * 45;
 
-            // If too close, back up slowly
-            if (distToTarget < optimalDistance - 120) {
-                ai.velocity.add(dirToTarget.clone().multiplyScalar(-aiAcceleration * 0.3));
+            if (distToTarget < optimalDistance - 45) {
+                ai.velocity.add(dirToTarget.clone().multiplyScalar(-aiAcceleration * 0.9));
             }
-            // If too far, approach at a slower speed
-            else if (distToTarget > optimalDistance + 10) {
-                ai.velocity.add(dirToTarget.clone().multiplyScalar(aiAcceleration * 0.4));
+            else if (distToTarget > optimalDistance + 70) {
+                ai.velocity.add(dirToTarget.clone().multiplyScalar(aiAcceleration * 0.95));
             }
-            // At good distance, strafe (orbit) but at a slower rate
             else {
                 if (time > ai.maneuverTime) {
-                    ai.maneuverTime = time + 4000 + Math.random() * 2000;
+                    ai.maneuverTime = time + 900 + Math.random() * 1400;
 
-                    // Calculate strafe direction (perpendicular to target direction)
                     const strafeDir = new THREE.Vector3();
                     strafeDir.crossVectors(dirToTarget, new THREE.Vector3(0, 1, 0)).normalize();
 
-                    // Randomize strafe direction
                     if (Math.random() > 0.5) strafeDir.negate();
 
-                    // Add some up/down movement
-                    strafeDir.y = (Math.random() - 0.5) * 0.3; // Less vertical movement
+                    strafeDir.y = (Math.random() - 0.5) * 0.75;
 
                     ai.maneuverDir = strafeDir;
                 }
 
-                // Apply the current maneuver but slower
                 ai.velocity.add(ai.maneuverDir.clone().multiplyScalar(aiStrafeSpeed));
             }
 
-            // Fire at player with slower reaction times
-            if (time > ai.nextShotTime && distToTarget < 120) { // Wider range (was 100)
-              ai.nextShotTime = time + 1200 + Math.random() * 2000; // Slower fire rate (was 800-2600)
-
-                // Get AI ship forward direction
-                const direction = new THREE.Vector3(0, 0, -1).applyQuaternion(ai.quaternion);
+            const direction = new THREE.Vector3(0, 0, -1).applyQuaternion(ai.quaternion).normalize();
+            const aimDot = direction.dot(dirToIntercept);
+            if (time > ai.nextShotTime && distToTarget < 260 && aimDot > 0.93) {
+              ai.nextShotTime = time + 650 + Math.random() * 1200;
 
                 spawnEnemyBullet(
                     ai.position.x,
@@ -810,7 +879,7 @@ function updateBullets() {
         } else {
             // No target - patrol behavior
             if (time > ai.maneuverTime) {
-                ai.maneuverTime = time + 6000 + Math.random() * 4000; // Slower patrol maneuvers
+                ai.maneuverTime = time + 1800 + Math.random() * 2200;
 
                 // Set a random patrol direction, biased toward player's general area
                 const toPlayer = playerShip.position.clone().sub(ai.position);
@@ -823,19 +892,18 @@ function updateBullets() {
                     // Random patrol direction
                     ai.maneuverDir = new THREE.Vector3(
                         Math.random() - 0.5,
-                        (Math.random() - 0.5) * 0.2, // Less vertical movement
+                        (Math.random() - 0.5) * 0.55,
                         Math.random() - 0.5
                     ).normalize();
                 }
 
                 // Calculate target orientation
                 const targetQuat = new THREE.Quaternion();
-                targetQuat.setFromUnitVectors(new THREE.Vector3(0, 0, 1), ai.maneuverDir);
-                ai.quaternion.slerp(targetQuat, 0.08); // Slower orientation change
+                targetQuat.setFromUnitVectors(new THREE.Vector3(0, 0, -1), ai.maneuverDir);
+                ai.quaternion.slerp(targetQuat, 0.1);
             }
 
-            // Move in current patrol direction but slower
-            ai.velocity.add(ai.maneuverDir.clone().multiplyScalar(aiAcceleration * 0.4));
+            ai.velocity.add(ai.maneuverDir.clone().multiplyScalar(aiAcceleration * 0.65));
         }
 
         if (ai.velocity.length() > aiMaxSpeed) {
@@ -851,7 +919,7 @@ function updateBullets() {
 
             // Update health fill
             const fill = ai.healthBar.children[1];
-            fill.scale.x = ai.health / 3; // max health is 3
+            fill.scale.x = ai.health / ai.maxHealth;
             fill.position.x = -0.75 * (1 - fill.scale.x); // Adjust position based on scale
         }
     });
@@ -951,9 +1019,7 @@ function createDamageText(damage, position) {
     scene.add(shockwave);
 
     // Play explosion sound
-    explosionSound.volume = 0.4;
-    explosionSound.playbackRate = 0.8 + Math.random() * 0.4;
-    explosionSound.play();
+    playSound(explosionSound, 0.4, 0.8 + Math.random() * 0.4);
 
     // Animate explosion
     const startTime = performance.now();
@@ -1058,11 +1124,11 @@ function createDamageText(damage, position) {
 
     // Update color based on health
     if (healthPercent > 60) {
-      healthFill.style.backgroundColor = '#4CAF50'; // Green
+      healthFill.style.background = 'linear-gradient(90deg, #6effa8, #ffcf6d)';
     } else if (healthPercent > 30) {
-      healthFill.style.backgroundColor = '#FF9800'; // Orange
+      healthFill.style.background = 'linear-gradient(90deg, #ffcf6d, #ff9f43)';
     } else {
-      healthFill.style.backgroundColor = '#F44336'; // Red
+      healthFill.style.background = 'linear-gradient(90deg, #ff5858, #ff9f43)';
     }
 
     // Update ammo
@@ -1073,6 +1139,10 @@ function createDamageText(damage, position) {
 
     // Update pilot name
     pilotNameText.textContent = myPlayerName;
+    speedText.textContent = `Speed: ${Math.round(playerShip.velocity.length() * 100)}`;
+    targetStatusText.textContent = combatTarget && combatTarget.visible
+      ? `Target: ${combatTarget.callsign || 'hostile'}`
+      : 'Target: none';
   }
 
   // Draw minimap
@@ -1181,9 +1251,14 @@ function createDamageText(damage, position) {
   // Crosshair drawing
   function updateCrosshair() {
     crosshairCtx.clearRect(0, 0, crosshairCanvas.width, crosshairCanvas.height);
-    const size = 20;
-    crosshairCtx.strokeStyle = '#00FFFF';
+    setReticleCenter();
+    const size = 18;
+    const speed = Math.min(playerShip.velocity.length() / playerMaxSpeed, 1);
+    crosshairCtx.save();
+    crosshairCtx.strokeStyle = 'rgba(216, 247, 255, 0.92)';
     crosshairCtx.lineWidth = 2;
+    crosshairCtx.shadowBlur = 12;
+    crosshairCtx.shadowColor = 'rgba(92, 214, 255, 0.75)';
   
     crosshairCtx.beginPath();
     crosshairCtx.arc(crosshairX, crosshairY, size / 2, 0, Math.PI * 2);
@@ -1199,6 +1274,11 @@ function createDamageText(damage, position) {
     crosshairCtx.moveTo(crosshairX + size / 2, crosshairY);
     crosshairCtx.lineTo(crosshairX + size, crosshairY);
     crosshairCtx.stroke();
+
+    crosshairCtx.strokeStyle = 'rgba(255, 207, 109, 0.8)';
+    crosshairCtx.beginPath();
+    crosshairCtx.arc(crosshairX, crosshairY, 34 + speed * 12, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * speed);
+    crosshairCtx.stroke();
   
     // Target nearest AI
     let nearestAI = null;
@@ -1208,20 +1288,28 @@ function createDamageText(damage, position) {
       const screenPos = ai.position.clone().project(camera);
       const x = (screenPos.x * 0.5 + 0.5) * window.innerWidth;
       const y = (-screenPos.y * 0.5 + 0.5) * window.innerHeight;
+      if (screenPos.z > 1) return;
       const dist = Math.sqrt((x - crosshairX) ** 2 + (y - crosshairY) ** 2);
-      if (dist < minDist && dist < 200) { // Within 200px
+      if (dist < minDist && dist < 240) {
         minDist = dist;
-        nearestAI = { x, y };
+        nearestAI = { ship: ai, x, y };
       }
     });
+    combatTarget = nearestAI ? nearestAI.ship : null;
   
     if (nearestAI) {
-      crosshairCtx.strokeStyle = '#ff4444';
-      crosshairCtx.lineWidth = 1;
+      crosshairCtx.strokeStyle = 'rgba(255, 88, 88, 0.96)';
+      crosshairCtx.lineWidth = 2;
       crosshairCtx.beginPath();
       crosshairCtx.arc(nearestAI.x, nearestAI.y, 30, 0, Math.PI * 2);
       crosshairCtx.stroke();
+      crosshairCtx.beginPath();
+      crosshairCtx.moveTo(crosshairX, crosshairY);
+      crosshairCtx.lineTo(nearestAI.x, nearestAI.y);
+      crosshairCtx.strokeStyle = 'rgba(255, 88, 88, 0.24)';
+      crosshairCtx.stroke();
     }
+    crosshairCtx.restore();
   }
 
   // Add kill to killfeed
@@ -1255,20 +1343,23 @@ function createDamageText(damage, position) {
   // Improved camera follow
   function updateCamera() {
     // Third-person camera positioning
-    const cameraOffset = new THREE.Vector3(0, 3, 10); // Above and behind
+    const speed = Math.min(playerShip.velocity.length() / Math.max(playerMaxSpeed, 0.1), 1);
+    const cameraOffset = new THREE.Vector3(0, 2.4 + speed * 0.8, 8.2 + speed * 3.4);
     cameraOffset.applyQuaternion(playerShip.quaternion);
   
     const targetPos = playerShip.position.clone().add(cameraOffset);
-    camera.position.lerp(targetPos, 0.1); // Smooth follow
+    camera.position.lerp(targetPos, 0.16);
   
     // Look at where the ship is pointing with slight lag
     const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(playerShip.quaternion);
-    const lookAtPos = playerShip.position.clone().add(forward.multiplyScalar(10));
+    const lookAtPos = playerShip.position.clone().add(forward.multiplyScalar(22 + speed * 18));
     const currentLookAt = new THREE.Vector3();
     camera.getWorldDirection(currentLookAt);
     const targetLookAt = lookAtPos.clone().sub(camera.position).normalize();
-    currentLookAt.lerp(targetLookAt, 0.05); // Slower look-at for cinematic feel
+    currentLookAt.lerp(targetLookAt, 0.09);
     camera.lookAt(camera.position.clone().add(currentLookAt));
+    camera.fov = THREE.MathUtils.lerp(camera.fov, 74 + speed * 8, 0.06);
+    camera.updateProjectionMatrix();
   }
 
   // First person camera
@@ -1294,8 +1385,10 @@ function createDamageText(damage, position) {
 
     // Hide player ship in first person
     playerShip.children.forEach(child => {
-      child.material.transparent = firstPersonView;
-      child.material.opacity = firstPersonView ? 0 : 1;
+      if (child.material) {
+        child.material.transparent = firstPersonView;
+        child.material.opacity = firstPersonView ? 0 : 1;
+      }
     });
   }
 
@@ -1397,13 +1490,25 @@ function createDamageText(damage, position) {
   let crosshairY = window.innerHeight / 2; // Initial crosshair Y position
   const mouseSensitivity = 0.003; // Rotation sensitivity (matches ship and crosshair)
   const crosshairMaxDistance = Math.min(window.innerWidth, window.innerHeight) * 0.3; // Max distance from center (30% of smaller dimension)
+
+  function setReticleCenter() {
+    crosshairX = window.innerWidth / 2;
+    crosshairY = window.innerHeight / 2;
+  }
   
   function onMouseMove(e) {
-    if (!gameStarted || !document.pointerLockElement) return;
+    if (!gameStarted) return;
+    if (!document.pointerLockElement && pointerLockAvailable) return;
   
     // Get relative mouse movement
-    const movementX = e.movementX || 0;
-    const movementY = e.movementY || 0;
+    let movementX = e.movementX || 0;
+    let movementY = e.movementY || 0;
+    if (!document.pointerLockElement) {
+      movementX = lastMouseX === null ? 0 : e.clientX - lastMouseX;
+      movementY = lastMouseY === null ? 0 : e.clientY - lastMouseY;
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+    }
   
     // Get current ship orientation
     const currentEuler = new THREE.Euler().setFromQuaternion(playerShip.quaternion, 'YXZ');
@@ -1418,35 +1523,7 @@ function createDamageText(damage, position) {
     const targetQuat = new THREE.Quaternion().setFromEuler(targetEuler);
     playerShip.quaternion.slerp(targetQuat, 0.25); // Keep damping
   
-    // Update crosshair position with a mix of ship orientation and mouse input
-    const centerX = window.innerWidth / 2;
-    const centerY = window.innerHeight / 2;
-  
-    // Ship-based offset
-    const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(playerShip.quaternion);
-    const cameraForward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-    const offset = forward.clone().sub(cameraForward).multiplyScalar(1000);
-    const screenOffset = offset.clone().project(camera);
-  
-    // Blend with direct mouse movement for responsiveness
-    crosshairX += movementX * 0.1; // Small direct input boost
-    crosshairY += movementY * 0.1;
-    crosshairX = THREE.MathUtils.lerp(crosshairX, centerX + (screenOffset.x * centerX), 0.5); // Smooth blend
-    crosshairY = THREE.MathUtils.lerp(crosshairY, centerY - (screenOffset.y * centerY), 0.5);
-  
-    // Constrain crosshair to circular boundary
-    const dx = crosshairX - centerX;
-    const dy = crosshairY - centerY;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    if (distance > crosshairMaxDistance) {
-      const angle = Math.atan2(dy, dx);
-      crosshairX = centerX + Math.cos(angle) * crosshairMaxDistance;
-      crosshairY = centerY + Math.sin(angle) * crosshairMaxDistance;
-    }
-  
-    // Update crosshair position
-    crosshairCanvas.style.left = `${crosshairX}px`;
-    crosshairCanvas.style.top = `${crosshairY}px`;
+    setReticleCenter();
   }
 
 
@@ -1491,9 +1568,9 @@ function createDamageText(damage, position) {
             });
           }
 
-          deathSound.play();
+          playSound(deathSound);
         } else {
-          hitSound.play();
+          playSound(hitSound);
         }
 
         updateUI();
@@ -1538,7 +1615,7 @@ function createDamageText(damage, position) {
           if (ship.health <= 0) {
             ship.visible = false;
             explosion(ship.position, 1.5);
-            createDamageText(3, ship.position); // Max health = 3
+            createDamageText(ship.maxHealth || 5, ship.position);
             setTimeout(() => {
               scene.remove(ship);
               aiShips.splice(shipIndex, 1);
@@ -1634,7 +1711,7 @@ function createDamageText(damage, position) {
 
           // Damage player
           playerShip.health--;
-          hitSound.play();
+          playSound(hitSound);
 
           if (playerShip.health <= 0) {
             playerShip.visible = false;
@@ -1642,7 +1719,7 @@ function createDamageText(damage, position) {
             showGameOver();
             freezeGame();
             addKillfeed('Asteroid', myPlayerName);
-            deathSound.play();
+            playSound(deathSound);
           }
 
           updateUI();
@@ -1686,7 +1763,7 @@ function createDamageText(damage, position) {
       if (keys.boost && boostSound.paused) {
         boostSound.currentTime = 0;
         boostSound.loop = true;
-        boostSound.play();
+        boostSound.play().catch(() => {});
       } else if (!keys.boost && !boostSound.paused) {
         boostSound.pause();
       }
@@ -1778,10 +1855,10 @@ let lastKillTime = 0;
         // playerShip.rotation is now handled in onMouseMove
 
         // Apply keyboard controls
-        const speedMultiplier = keys.boost ? 1.5 : 1.0; // Slightly reduced boost
-        const acceleration = 0.05; // Reduced acceleration
-        let maxSpeed = 1.2; // Reduced max speed
-        const deceleration = 0.03; // Slightly increased deceleration for smoother stops
+        const speedMultiplier = keys.boost ? 1.85 : 1.0;
+        const acceleration = 0.062;
+        const maxSpeed = keys.boost ? playerMaxSpeed * 1.35 : playerMaxSpeed;
+        const deceleration = keys.boost ? 0.018 : 0.026;
 
         if (keys.forward) {
             const forward = new THREE.Vector3(0, 0, -acceleration * speedMultiplier * delta);
@@ -1852,6 +1929,7 @@ let lastKillTime = 0;
         updateAsteroids();
         updateMinimap();
         updateCrosshair();
+        updateUI();
         checkCollisions();
 
         // Render the scene

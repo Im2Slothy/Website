@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="shortcut icon" type="image/x-icon" href="img/sloth.png"/>
-    <title>PVP/AI Shooter</title>
+    <title>Pilot: Space Combat</title>
     <link rel="stylesheet" href="pilot.css">
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
   </head>
@@ -12,19 +12,25 @@
     <div id="landing-page">
       <h1>Pilot: Space Combat</h1>
       <input type="text" id="player-name" placeholder="Enter your name" maxlength="12">
-      <p>Controls: WASD to move, Mouse to aim & fly, Mouse Button 1 to shoot, R to respawn, and Q and E to Roll.</p>
+      <p>WASD strafe, Space/C vertical, mouse flight, MB1 fire, Shift boost, Q/E roll, V camera, R respawn.</p>
       <button id="share-x-btn">Share on X</button>
       <button id="play-button">PLAY</button>
       <button id="main-website-btn" onclick="window.location.href='index.html'">Main Website</button>
     </div>
+    <div id="cockpit-vignette"></div>
     <canvas id="minimap" width="200" height="200"></canvas>
     <canvas id="crosshair" width="300" height="300"></canvas>
     <div id="killfeed"></div>
     <div id="ui-panel">
+      <div class="hud-label">Hull Integrity</div>
       <div id="health-bar"><div id="health-fill"></div></div>
-      <p id="ammo">Shots Fired: 0</p>
-      <p id="kills">Kills: 0</p>
-      <p id="pilot-name">Pilot Name: Player</p>
+      <div class="hud-grid">
+        <p id="ammo">Shots: 0</p>
+        <p id="kills">Kills: 0</p>
+        <p id="speed">Speed: 0</p>
+        <p id="target-status">Target: none</p>
+      </div>
+      <p id="pilot-name">Player</p>
     </div>
     <div id="game-over" class="hidden">
       <h1>Game Over</h1>
