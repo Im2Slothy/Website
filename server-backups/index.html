@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Backups</title>
+    <meta name="description" content="Server Backups is a private utility operated by the owner of im2slothy.com to back up Windows Server databases to the owner's Google Drive.">
+    <link rel="canonical" href="https://im2slothy.com/server-backups/">
+    <link rel="icon" type="image/png" href="/img/slothfoot.png">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/server-backups/server-backups.css">
+</head>
+<body class="backup-page">
+    <header>
+        <nav class="navbar" aria-label="Main navigation">
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/portfolio.html">Portfolio</a></li>
+                <li><a href="/game.html">2D Shooter</a></li>
+                <li><a href="/pilot.html">Pilot: Space Combat</a></li>
+                <li><a href="/server-backups/" aria-current="page">Server Backups</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <div class="backup-heading">
+            <p class="eyebrow">Private server utility</p>
+            <h1>Server Backups</h1>
+            <p class="intro">Automated off-site database backups for a privately operated Windows Server.</p>
+            <nav class="backup-actions" aria-label="Server Backups policies">
+                <a class="button" href="/server-backups/privacy/">Privacy Policy</a>
+                <a class="button secondary" href="/server-backups/terms/">Terms of Service</a>
+            </nav>
+        </div>
+        <article class="backup-content" aria-label="About Server Backups">
+            <section>
+                <h2>What it does</h2>
+                <p>Server Backups is a private utility operated by the owner of im2slothy.com. It uses rclone to automatically upload backups of SQLite database files from the owner's personal Windows Server to the owner's Google Drive.</p>
+                <p>The utility is intended only for the owner's personal server administration and backup purposes. It is not offered as a service to the general public.</p>
+            </section>
+            <section>
+                <h2>Why Google Drive access is needed</h2>
+                <p>Google Drive authorization is used solely for backup storage. Server Backups uses the <code>https://www.googleapis.com/auth/drive.file</code> OAuth scope to create and manage its backup files and folders.</p>
+                <p>Google data is used only as necessary to create and manage backup files. The utility does not request unrestricted access to all existing Google Drive files.</p>
+            </section>
+            <section>
+                <h2>How data is used</h2>
+                <p>Server Backups does not sell user data, serve advertising, use Google user data for advertising, or provide data to advertisers. Google user data is not shared with unrelated third parties.</p>
+                <p>See the <a href="/server-backups/privacy/">Privacy Policy</a> for details about Google Drive access and stored credentials, and the <a href="/server-backups/terms/">Terms of Service</a> for the utility's terms.</p>
+            </section>
+        </article>
+    </main>
+    <footer>
+        <div class="footer-content">
+            <div class="contact-info">
+                <h4>Contact</h4>
+                <p><a href="mailto:chrisbennett0528@gmail.com">chrisbennett0528@gmail.com</a></p>
+            </div>
+            <div class="footer-logo"><h2>Stay Slothy!</h2></div>
+        </div>
+        <nav class="backup-footer-links" aria-label="Server Backups navigation">
+            <a href="/server-backups/" aria-current="page">Server Backups</a>
+            <a href="/server-backups/privacy/">Privacy Policy</a>
+            <a href="/server-backups/terms/">Terms of Service</a>
+        </nav>
+        <div class="copyright"><p>&copy; 2026 Chris B. All rights reserved.</p></div>
+    </footer>
+</body>
+</html>

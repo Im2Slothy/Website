@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Backups Privacy Policy</title>
+    <meta name="description" content="How the private Server Backups utility uses limited Google Drive access, stores backup files and OAuth credentials, and allows access to be revoked.">
+    <link rel="canonical" href="https://im2slothy.com/server-backups/privacy/">
+    <link rel="icon" type="image/png" href="/img/slothfoot.png">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/server-backups/server-backups.css">
+</head>
+<body class="backup-page">
+    <header>
+        <nav class="navbar" aria-label="Main navigation">
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/portfolio.html">Portfolio</a></li>
+                <li><a href="/game.html">2D Shooter</a></li>
+                <li><a href="/pilot.html">Pilot: Space Combat</a></li>
+                <li><a href="/server-backups/">Server Backups</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <div class="backup-heading">
+            <p class="eyebrow">Private server utility</p>
+            <h1>Server Backups Privacy Policy</h1>
+            <p class="updated">Last updated: <time datetime="2026-09-29">September 29, 2026</time></p>
+        </div>
+        <article class="backup-content" aria-label="Privacy policy">
+            <section>
+                <h2>Purpose and operator</h2>
+                <p>Server Backups is a private server-backup utility operated by the owner of im2slothy.com. It uses rclone to upload automated backups of SQLite database files from a privately operated Windows Server to the owner's Google Drive.</p>
+                <p>The application is intended only for the owner's personal and private use. It is not offered as a service to the general public.</p>
+            </section>
+            <section>
+                <h2>Google Drive access</h2>
+                <p>Server Backups uses Google OAuth with the <code>https://www.googleapis.com/auth/drive.file</code> scope. This scope provides limited, per-file access.</p>
+                <p>The application accesses Google Drive only to create, upload, list, update, and manage backup files and folders created or used by the Server Backups utility, within the access granted by this scope. Access is limited to items the utility creates or that the owner explicitly makes available to it.</p>
+                <p>The application does not request unrestricted access to all existing Google Drive files. Google Drive authorization and Google user data are used only for the server backup functionality described on the <a href="/server-backups/">Server Backups homepage</a>.</p>
+            </section>
+            <section>
+                <h2>Credentials and backup storage</h2>
+                <p>Google OAuth credentials and tokens may be stored securely on the privately operated server so automated backups can run without repeated manual authorization.</p>
+                <p>Backup database files are stored in the owner's Google Drive. The utility uses Google Drive as the off-site storage destination for these backups.</p>
+            </section>
+            <section>
+                <h2>Use and sharing of Google user data</h2>
+                <p>Google user data is used only as necessary to create and manage the utility's backup files.</p>
+                <ul>
+                    <li>Google user data is not sold.</li>
+                    <li>Google user data is not used for advertising or provided to advertisers.</li>
+                    <li>Google user data is not shared with unrelated third parties.</li>
+                </ul>
+            </section>
+            <section>
+                <h2>Revoking access</h2>
+                <p>The owner can review and revoke Server Backups' access through their <a href="https://myaccount.google.com/connections">Google Account permissions</a>. Select Server Backups and remove its access to Google Drive.</p>
+                <p>Revoking access prevents the utility from accessing Google Drive for further backups until it is authorized again. It does not itself delete backup files already stored in Google Drive; those files can be managed directly in Google Drive.</p>
+            </section>
+            <section>
+                <h2>Contact</h2>
+                <p>For questions about this policy or Server Backups, contact the operator at <a href="mailto:chrisbennett0528@gmail.com">chrisbennett0528@gmail.com</a>.</p>
+                <p>Return to the <a href="/server-backups/">Server Backups homepage</a> or read the <a href="/server-backups/terms/">Terms of Service</a>.</p>
+            </section>
+        </article>
+    </main>
+    <footer>
+        <div class="footer-content">
+            <div class="contact-info">
+                <h4>Contact</h4>
+                <p><a href="mailto:chrisbennett0528@gmail.com">chrisbennett0528@gmail.com</a></p>
+            </div>
+            <div class="footer-logo"><h2>Stay Slothy!</h2></div>
+        </div>
+        <nav class="backup-footer-links" aria-label="Server Backups navigation">
+            <a href="/server-backups/">Server Backups</a>
+            <a href="/server-backups/privacy/" aria-current="page">Privacy Policy</a>
+            <a href="/server-backups/terms/">Terms of Service</a>
+        </nav>
+        <div class="copyright"><p>&copy; 2026 Chris B. All rights reserved.</p></div>
+    </footer>
+</body>
+</html>
